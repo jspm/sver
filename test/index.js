@@ -275,6 +275,8 @@ suite('Range functions', () => {
     assert.equal(new SemverRange('^1.1.0').intersect('1.3.3-alpha').toString(), '1.3.3-alpha');
     assert.equal(new SemverRange('^1.0.5').intersect('~1.0.7').toString(), '~1.0.7');
     assert.equal(new SemverRange('^1.0.5').intersect('~1.0.3').toString(), '~1.0.5');
+    assert.equal(new SemverRange('~2.5.0').intersect('^2.5.0-alpha.1').toString(), '~2.5.0');
+    assert.equal(new SemverRange('~2.5.0').intersect('^2.5.1-alpha.1').toString(), '~2.5.1-alpha.1');
   });
 });
 
@@ -290,5 +292,6 @@ suite('Range conversion', () => {
     assert.equal(convertRange('>2.0.0 <=2.5.3').toString(), '2.5.3');
     assert.equal(convertRange('>2.0.0 <2.5.3').toString(), '~2.5.0');
     assert.equal(convertRange('>2.5.0 <2.5.3').toString(), '~2.5.1');
+    assert.equal(convertRange('>2.5.1-alpha <2.5.3').toString(), '~2.5.1-alpha.1');
   });
 });

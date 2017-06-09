@@ -86,7 +86,7 @@ module.exports = function nodeRangeToSemverRange (range) {
     let lowerRange;
     if (!lowerEq) {
       if (lowerBound.pre)
-        lowerRange = new SemverRange('^' + lowerBound.major + '.' + lowerBound.minor + '.' + lowerBound.patch + '-' + [...lowerBound.pre, 1]);
+        lowerRange = new SemverRange('^' + lowerBound.major + '.' + lowerBound.minor + '.' + lowerBound.patch + '-' + [...lowerBound.pre, 1].join('.'));
       else
         lowerRange = new SemverRange('^' + lowerBound.major + '.' + lowerBound.minor + '.' + (lowerBound.patch + 1));
     }
