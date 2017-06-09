@@ -2,6 +2,8 @@
 
 Another Semver utility library. Supports NodeJS 6+ only. No maintenance guarantees.
 
+This is the semver library used by jspm.
+
 ```
 npm install sver
 ```
@@ -66,6 +68,21 @@ let ranges = ['^1.2.3', '1.2', '2.3.4'];
 
 versions.sort(Semver.compare);   // [1.2.3, 2.3.4-alpha, 2.3.4-alpha.2, 2.4.5]
 ranges.sort(SemverRange.compare) // [1.2, ^1.2.3, 2.3.4]
+```
+
+### Conversion from Node Semver Ranges
+
+A utility function is included to convert Node Semver ranges into Semver ranges.
+
+This requires `semver` to be installed in the application running this process.
+
+_Note this conversion is lossy by definition._
+
+```js
+const convertRange = require('sver/convert-range');
+
+convertRange('>=2.3.4 <3.0.0').toString(); // ^2.3.4
+convertRange('1 || 2 || 3').toString();    // ^3.0.0
 ```
 
 ## API

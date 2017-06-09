@@ -1,4 +1,5 @@
 const { Semver, SemverRange } = require('../sver.js');
+const convertRange = require('../convert-range.js');
 const assert = require('assert');
 
 suite('Semver Major and Minor Ranges', () => {
@@ -8,7 +9,9 @@ suite('Semver Major and Minor Ranges', () => {
     assert.equal(SemverRange.match('0.0.1', '0.0.0'), false);
     assert.equal(SemverRange.match('0.0.1', '0.0.2'), false);
     assert.equal(SemverRange.match('0.0.1', '0.0.1-betaasdf-asdf'), false);
-    assert.equal(new SemverRange('0.1').toString(), '~0.1.0-');
+    assert.equal(new SemverRange('0.1').toString(), '0.1');
+    assert.equal(new SemverRange('~0.1').toString(), '0.1');
+    assert.equal(new SemverRange('^0.1').toString(), '0.1');
   });
   test('Range test 2', () => {
     assert.equal(new Semver('0.1.0-').lt('0.1.0'), true);
@@ -86,10 +89,11 @@ suite('Semver Major and Minor Ranges', () => {
     assert.equal(Semver.compare('1.0.0-rc.1', '1.0.0'), -1);
   });
   test('Range test 11', () => {
-    let versions = ['1.2.3', '1.3.4-alpha', '1.3.4-alpha.1', '1.3.4-beta'];
+    let versions = ['1.2.3', '1.3.4-alpha', '1.3.4-alpha.1', '1.3.4-beta', '1.2.3+b', '1.2.3+a'];
     let range = new SemverRange('*');
 
     let bestStableMatch = range.bestMatch(versions);
+    let s = new Semver('1.2.3+b');
     assert.equal(bestStableMatch.toString(), '1.2.3');
 
     let bestUnstableMatch = range.bestMatch(versions, true);
@@ -130,7 +134,7 @@ suite('Semver Compare', () => {
   });
 
   test('Compare with build numbers', () => {
-    assert.equal(Semver.compare('0.2.0-build.2+sha.c4e21ef', '0.2.0-build.1+sha.9db70d3'), 1);
+    assert.equal(Semver.compare('0.2.0-build.2+sha.c4e21ef', '0.2.0-build.1+sha.9db70d3'), 0);
   });
 
   test('Contains', () => {
@@ -262,11 +266,29 @@ suite('Range functions', () => {
     assert.equal(new SemverRange('~1.1.0').intersect('~1.2.1'), undefined);
     assert.equal(new SemverRange('^1.1.0').intersect('1.2.1-alpha').toString(), '1.2.1-alpha');
     assert.equal(new SemverRange('^1.1.0').intersect('~1.0.1'), undefined);
-    assert.equal(new SemverRange('^1.1.0').intersect('1.3').toString(), '~1.3.0-');
+    assert.equal(new SemverRange('^1.1.0').intersect('1.3').toString(), '1.3');
+    assert.equal(new SemverRange('^1.1.0').intersect('~1.3').toString(), '1.3');
+    assert.equal(new SemverRange('^1.1.0').intersect('^1.3').toString(), '^1.3');
+    assert.equal(new SemverRange('^1.1.0').intersect('^1.3.0').toString(), '^1.3.0');
     assert.equal(new SemverRange('^1.1.0').intersect('^1.2.1').toString(), '^1.2.1');
     assert.equal(new SemverRange('^1.1.0').intersect('~1.3.1-alpha').toString(), '~1.3.1-alpha');
     assert.equal(new SemverRange('^1.1.0').intersect('1.3.3-alpha').toString(), '1.3.3-alpha');
     assert.equal(new SemverRange('^1.0.5').intersect('~1.0.7').toString(), '~1.0.7');
     assert.equal(new SemverRange('^1.0.5').intersect('~1.0.3').toString(), '~1.0.5');
+  });
+});
+
+suite('Range conversion', () => {
+  test('Semver conversions', () => {
+    assert.equal(convertRange('>=2.3.4 <3.0.0').toString(), '^2.3.4');
+    assert.equal(convertRange('1 || 2 || 3').toString(), '^3.0.0');
+    assert.equal(convertRange('>=2.3.4 <2.4.0').toString(), '~2.3.4');
+    assert.equal(convertRange('1 2 3').toString(), '3.0.0');
+    assert.equal(convertRange('hello-world').toString(), 'hello-world');
+    assert.equal(convertRange('^0.2.3').toString(), '~0.2.3');
+    assert.equal(convertRange('^0.0.3').toString(), '0.0.3');
+    assert.equal(convertRange('>2.0.0 <=2.5.3').toString(), '2.5.3');
+    assert.equal(convertRange('>2.0.0 <2.5.3').toString(), '~2.5.0');
+    assert.equal(convertRange('>2.5.0 <2.5.3').toString(), '~2.5.1');
   });
 });

@@ -1,13 +1,14 @@
 'use strict';
 
-const shortSemverRegEx = /^(0|[1-9]\d*)(\.(?:0|[1-9]\d*))?$/;
-const semverRegEx = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([\da-z-]+(?:\.[\da-z-]+)*)(?:\+([\da-z-]+(?:\.[\da-z-]+)*)?)?)?$/i;
-const validTagRegEx = /^[^=<>@\/\\ ][^|#\/\\ @]+$/;
+const shortSemverRegEx = /^([~\^])?(0|[1-9]\d*)(\.(?:0|[1-9]\d*))?$/;
+const semverRegEx = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([\da-z-]+(?:\.[\da-z-]+)*))?(\+[\da-z-]+)?$/i;
+const validTagRegEx = /^[^=<>#\/\\ @][^|#\/\\ @]+$/;
 
 const MAJOR = Symbol('major');
 const MINOR = Symbol('minor');
 const PATCH = Symbol('patch');
 const PRE = Symbol('pre');
+const BUILD = Symbol('build');
 const TAG = Symbol('tag');
 
 let numRegEx = /^\d+$/;
@@ -32,6 +33,22 @@ class Semver {
     this[MINOR] = parseInt(semver[2], 10);
     this[PATCH] = parseInt(semver[3], 10);
     this[PRE] = semver[4] && semver[4].split('.');
+    this[BUILD] = semver[5];
+  }
+  get major () {
+    return this[MAJOR];
+  }
+  get minor () {
+    return this[MINOR];
+  }
+  get patch () {
+    return this[PATCH];
+  }
+  get pre () {
+    return this[PRE];
+  }
+  get build () {
+    return this[BUILD];
   }
   gt (version) {
     return Semver.compare(this, version) === 1;
@@ -63,7 +80,7 @@ class Semver {
       if (this[PRE][i] !== version[PRE][i])
         return false;
     }
-    return true;
+    return this[BUILD] === version[BUILD];
   }
   matches (range, unstable = false) {
     if (!(range instanceof SemverRange))
@@ -73,7 +90,7 @@ class Semver {
   toString () {
     if (this[TAG])
       return this[TAG];
-    return this[MAJOR] + '.' + this[MINOR] + '.' + this[PATCH] + (this[PRE] ? '-' + this[PRE].join('.') : '');
+    return this[MAJOR] + '.' + this[MINOR] + '.' + this[PATCH] + (this[PRE] ? '-' + this[PRE].join('.') : '') + (this[BUILD] ? this[BUILD] : '');
   }
   static isValid (version) {
     let semver = version.match(semverRegEx);
@@ -154,13 +171,20 @@ class SemverRange {
     }
     let shortSemver = versionRange.match(shortSemverRegEx);
     if (shortSemver) {
-      if (shortSemver[2] === undefined) {
+      if (shortSemver[1])
+        versionRange = versionRange.substr(1);
+      if (shortSemver[3] === undefined) {
+        // ^, ~ mean the same thing for a single major
         this[VERSION] = new Semver(versionRange + '.0.0');
         this[TYPE] = MAJOR_RANGE;
       }
       else {
         this[VERSION] = new Semver(versionRange + '.0');
-        this[TYPE] = STABLE_RANGE;
+        // ^ only becomes major range for major > 0
+        if (shortSemver[1] === '^' && shortSemver[2] !== '0')
+          this[TYPE] = MAJOR_RANGE;
+        else
+          this[TYPE] = STABLE_RANGE;
       }
       this[VERSION][PRE] = this[VERSION][PRE] || [];
     }
@@ -185,7 +209,7 @@ class SemverRange {
       this[TYPE] = EXACT_RANGE;
     }
     if (this[VERSION][TAG] && this[TYPE] !== EXACT_RANGE) {
-      let e = new TypeError("Semver range %" + versionRange + "% is not supported.");
+      let e = new TypeError(`Semver range "${versionRange}" is not supported.`);
       e.code = 'ENOTSEMVER';
       throw e;
     }
@@ -201,6 +225,9 @@ class SemverRange {
   }
   get isExact () {
     return this[TYPE] === EXACT_RANGE;
+  }
+  get version () {
+    return this[VERSION];
   }
   gt (range) {
     return SemverRange.compare(this, range) === 1;
@@ -297,15 +324,20 @@ class SemverRange {
     return maxSemver;
   }
   toString () {
+    let version = this[VERSION];
     switch (this[TYPE]) {
       case WILDCARD_RANGE:
         return '*';
       case MAJOR_RANGE:
-        return '^' + this[VERSION].toString();
+        if (version[PRE] && version[PRE].length === 0 && version[PATCH] === 0)
+          return '^' + version[MAJOR] + '.' + version[MINOR];
+        return '^' + version.toString();
       case STABLE_RANGE:
-        return '~' + this[VERSION].toString();
+        if (version[PRE] && version[PRE].length === 0 && version[PATCH] === 0)
+          return version[MAJOR] + '.' + version[MINOR];
+        return '~' + version.toString();
       case EXACT_RANGE:
-        return this[VERSION].toString();
+        return version.toString();
     }
   }
   static match (range, version, unstable = false) {
