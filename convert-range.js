@@ -98,8 +98,8 @@ module.exports = function nodeRangeToSemverRange (range) {
     // if the intersection is empty, we return the upper range only
     let curRange = lowerRange.intersect(upperRange) || upperRange;
 
-    // the higher union range wins
-    if (!outRange || curRange.gt(outRange))
+    // the largest or highest union range wins
+    if (!outRange || !outRange.contains(curRange) && curRange.gt(outRange))
       outRange = curRange;
   }
   return outRange;

@@ -293,5 +293,6 @@ suite('Range conversion', () => {
     assert.equal(convertRange('>2.0.0 <2.5.3').toString(), '~2.5.0');
     assert.equal(convertRange('>2.5.0 <2.5.3').toString(), '~2.5.1');
     assert.equal(convertRange('>2.5.1-alpha <2.5.3').toString(), '~2.5.1-alpha.1');
+    assert.equal(convertRange('^2.3.4 || ~2.5.0').toString(), '^2.3.4');
   });
 });
