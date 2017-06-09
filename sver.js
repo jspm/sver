@@ -1,8 +1,11 @@
 'use strict';
 
-const shortSemverRegEx = /^([~\^])?(0|[1-9]\d*)(\.(?:0|[1-9]\d*))?$/;
+const shortSemverRegEx = /^([~\^])?(0|[1-9]\d*)(?:\.(0|[1-9]\d*))?$/;
 const semverRegEx = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([\da-z-]+(?:\.[\da-z-]+)*))?(\+[\da-z-]+)?$/i;
 const validTagRegEx = /^[^=<>#\/\\ @][^|#\/\\ @]+$/;
+exports.semverRegEx = semverRegEx;
+exports.shortSemverRegEx = shortSemverRegEx;
+exports.validTagRegEx = validTagRegEx;
 
 const MAJOR = Symbol('major');
 const MINOR = Symbol('minor');
