@@ -217,17 +217,17 @@ class SemverRange {
       throw e;
     }
   }
-  get isWildcard () {
-    return this[TYPE] === WILDCARD_RANGE;
-  }
-  get isMajor () {
-    return this[TYPE] === MAJOR_RANGE;
-  }
-  get isStable () {
-    return this[TYPE] === STABLE_RANGE;
-  }
-  get isExact () {
-    return this[TYPE] === EXACT_RANGE;
+  get type () {
+    switch (this[TYPE]) {
+      case WILDCARD_RANGE:
+        return 'wildcard';
+      case MAJOR_RANGE:
+        return 'major';
+      case STABLE_RANGE:
+        return 'stable';
+      case EXACT_RANGE:
+        return 'exact';
+    }
   }
   get version () {
     return this[VERSION];

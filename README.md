@@ -112,10 +112,8 @@ Static methods:
 
 For a given SemverRange instance `range = new SemverRange('^X.Y.Z')`,
 
-* `range.isWildcard: bool`: Whether this range is a wildcard range.
-* `range.isMajor: bool`: Whether this range is a major range permitting minor bumps (`^`).
-* `range.isStable: bool`: Whether this range is a stable range permitting patch bumps (`~`).
-* `range.isExact: bool`: Whether this range represents an exact version equality only.
+* `range.type: string`: Returns `'wildcard'`, `'major'`, `'stable'` or `'exact'`.
+* `range.version: Smever`: Returns the `Semver` instance corresponding to the range.
 * `range.gt(otherRange: SemverRange|string): bool`: Whether the range is greater than the other range.
 * `range.lt(otherRange: SemverRange|string): bool`: Whether the range is less than the other range.
 * `range.eq(otherRange: SemverRange|string): bool`: Whether the range is exactly the same as the other range.
