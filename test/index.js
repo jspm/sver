@@ -64,13 +64,7 @@ suite('Semver Major and Minor Ranges', () => {
   });
   test('Range test 9', () => {
     assert.equal(Semver.compare('0.2.0', 'master'), 1);
-    try {
-      assert.equal(Semver.compare('wip/here/some-thing', '0.3.0-alpha'), -1);
-      assert(false);
-    }
-    catch (e) {
-      assert(e.code === 'ENOTSEMVER');
-    }
+    assert.equal(Semver.compare('wip/here/some-thing', '0.3.0-alpha'), -1);
     assert.equal(Semver.compare('wip%2Fhere%2Fsome%2Fthing', '0.3.0-alpha'), -1);
     assert.equal(Semver.compare('1.2.a', '0.0.1'), -1);
     assert.equal(Semver.compare('1.2.3-beta', '1.2.3-alpha'), 1);

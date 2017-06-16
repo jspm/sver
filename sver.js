@@ -2,10 +2,8 @@
 
 const shortSemverRegEx = /^([~\^])?(0|[1-9]\d*)(?:\.(0|[1-9]\d*))?$/;
 const semverRegEx = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([\da-z-]+(?:\.[\da-z-]+)*))?(\+[\da-z-]+)?$/i;
-const validTagRegEx = /^[^=<>#\/\\ @][^|#\/\\ @]+$/;
 exports.semverRegEx = semverRegEx;
 exports.shortSemverRegEx = shortSemverRegEx;
-exports.validTagRegEx = validTagRegEx;
 
 const MAJOR = Symbol('major');
 const MINOR = Symbol('minor');
@@ -19,18 +17,8 @@ class Semver {
   constructor (version) {
     let semver = version.match(semverRegEx);
     if (!semver) {
-      if (!version.match(validTagRegEx)) {
-        let e = new TypeError(`"${version}" is not a valid exact version.`);
-        e.code = 'ENOTSEMVER';
-        throw e;
-      }
       this[TAG] = version;
       return;
-    }
-    if (semver[2] === undefined || semver[3] === undefined) {
-      let e = new TypeError(`"${version}" is not an exact version.`);
-      e.code = 'ENOTSEMVER';
-      throw e;
     }
     this[MAJOR] = parseInt(semver[1], 10);
     this[MINOR] = parseInt(semver[2], 10);
@@ -52,6 +40,9 @@ class Semver {
   }
   get build () {
     return this[BUILD];
+  }
+  get tag () {
+    return this[TAG];
   }
   gt (version) {
     return Semver.compare(this, version) === 1;
@@ -97,14 +88,7 @@ class Semver {
   }
   static isValid (version) {
     let semver = version.match(semverRegEx);
-    if (!semver) {
-      if (version.match(validTagRegEx))
-        return false;
-      return true;
-    }
-    if (semver[2] === undefined || semver[3] === undefined)
-      return false;
-    return true;
+    return semver && semver[2] !== undefined && semver[3] !== undefined;
   }
   static compare (v1, v2) {
     if (!(v1 instanceof Semver))
@@ -211,11 +195,20 @@ class SemverRange {
       this[VERSION] = new Semver(versionRange);
       this[TYPE] = EXACT_RANGE;
     }
-    if (this[VERSION][TAG] && this[TYPE] !== EXACT_RANGE) {
-      let e = new TypeError(`Semver range "${versionRange}" is not supported.`);
-      e.code = 'ENOTSEMVER';
-      throw e;
-    }
+    if (this[VERSION][TAG] && this[TYPE] !== EXACT_RANGE)
+      this[TYPE] = EXACT_RANGE;
+  }
+  get isExact () {
+    return this[TYPE] === EXACT_RANGE;
+  }
+  get isStable () {
+    return this[TYPE] === STABLE_RANGE;
+  }
+  get isMajor () {
+    return this[TYPE] === MAJOR_RANGE;
+  }
+  get isWildcard () {
+    return this[TYPE] === WILDCARD_RANGE;
   }
   get type () {
     switch (this[TYPE]) {
@@ -349,13 +342,8 @@ class SemverRange {
     return version.matches(range, unstable);
   }
   static isValid (range) {
-    try {
-      new SemverRange(range);
-    }
-    catch (e) {
-      return false;
-    }
-    return true;
+    let semverRange = new SemverRange(range);
+    return semverRange[TYPE] !== EXACT_RANGE || semverRange[VERSION][TAG] === undefined;
   }
   static compare (r1, r2) {
     if (!(r1 instanceof SemverRange))

@@ -2,22 +2,24 @@ const nodeSemver = require('semver');
 const { Semver, SemverRange } = require('./sver');
 
 module.exports = function nodeRangeToSemverRange (range) {
-  try {
+  let parsed = nodeSemver.validRange(range);
+
+  // tag or wildcard
+  if (!parsed || parsed === '*')
     return new SemverRange(range);
+
+  try {
+    let semverRange = new SemverRange(range);
+    if (!semverRange.version.tag)
+      return semverRange;
   }
   catch (e) {
     if (e.code !== 'ENOTSEMVER')
       throw e;
   }
 
-  range = nodeSemver.validRange(range);
-
-  // tag or wildcard
-  if (!range || range === '*')
-    return new SemverRange(range);
-
   let outRange;
-  for (let union of range.split('||')) {
+  for (let union of parsed.split('||')) {
 
     // compute the intersection into a lowest upper bound and a highest lower bound
     let upperBound, lowerBound, upperEq, lowerEq;

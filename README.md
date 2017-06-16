@@ -31,9 +31,7 @@ Restricts version ranges to the simplified cases:
 * `~MAJOR.MINOR.PATCH[-PRE]`: Match patch bumps
 * `^MAJOR.MINOR.PATCH[-PRE]`: Match minor and patch bumps
 
-No support is provided for whitespace, `=`, `<`, `>`, `|`, or `&` in versions.
-
-Versions using invalid version characters will get a `ENOTSEMVER` error.
+Invalid ranges will fallback to being detected as exact string matches.
 
 ### Prerelease Matching
 
@@ -85,6 +83,29 @@ convertRange('>=2.3.4 <3.0.0').toString(); // ^2.3.4
 convertRange('1 || 2 || 3').toString();    // ^3.0.0
 ```
 
+### Semver and Semver Range Validation
+
+When a version string fails semver validation it falls back to being treated as a tag, still as a `Semver` instance.
+
+For example:
+
+```js
+let version = new Semver('x.y.z');
+version.tag === 'x.y.z';             // true
+
+version = new Semver('^1.2.3');
+version.major === undefined;         // true
+version.tag === '^1.2.3';            // true
+```
+
+For validation, rather use `Semver.isValid` and `SemverRange.isValid`:
+
+```js
+Semver.isValid('x.y.z');             // false
+Semver.isValid('^1.2.3');            // false
+SemverRange.isValid('^1.2.3');       // true
+```
+
 ## API
 
 ### Semver
@@ -96,6 +117,12 @@ Static methods:
 
 For a given Semver instance `version = new Semver('X.Y.Z')`,
 
+* `version.major`: The major version number.
+* `version.minor`: The minor version number.
+* `version.patch`: The patch version number.
+* `version.pre`: The prerelease identifer, as an array of strings (`.`-separated).
+* `version.build`: The build identifier, as a string.
+* `version.tag`: If not a valid semver, the full tag string.
 * `version.gt(otherVersion: Semver|string): bool`: Whether this version is greater than the other version.
 * `version.lt(otherVersion: Semver|string): bool`: Whether this version is less than the other version.
 * `version.eq(otherVerion: Semver|string): bool`: Whether this version equals the other version.
@@ -114,6 +141,10 @@ For a given SemverRange instance `range = new SemverRange('^X.Y.Z')`,
 
 * `range.type: string`: Returns `'wildcard'`, `'major'`, `'stable'` or `'exact'`.
 * `range.version: Smever`: Returns the `Semver` instance corresponding to the range.
+* `range.isExact: string`: Returns true if the range is an exact version only.
+* `range.isStable: string`: Returns true if the range is a stable version range.
+* `range.isMajor: string`: Returns true if the range is a major version range.
+* `range.isWildcard: string`: Returns true if the range is the wildcard version range.
 * `range.gt(otherRange: SemverRange|string): bool`: Whether the range is greater than the other range.
 * `range.lt(otherRange: SemverRange|string): bool`: Whether the range is less than the other range.
 * `range.eq(otherRange: SemverRange|string): bool`: Whether the range is exactly the same as the other range.
