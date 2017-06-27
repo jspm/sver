@@ -98,7 +98,7 @@ module.exports = function nodeRangeToSemverRange (range) {
 
     // we then intersect the upper semver range with the lower semver range
     // if the intersection is empty, we return the upper range only
-    let curRange = lowerRange.intersect(upperRange) || upperRange;
+    let curRange = upperRange ? lowerRange.intersect(upperRange) || upperRange : lowerRange;
 
     // the largest or highest union range wins
     if (!outRange || !outRange.contains(curRange) && curRange.gt(outRange))
