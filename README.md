@@ -1,6 +1,6 @@
 # Sver
 
-![Build Status](https://travis-ci.org/guybedford/sver.svg?branch=master)
+[![Build Status](https://travis-ci.org/guybedford/sver.svg?branch=master)](https://travis-ci.org/guybedford/sver)
 
 Another Semver utility library. Supports NodeJS 6+ only. No maintenance guarantees.
 
