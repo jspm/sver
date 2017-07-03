@@ -26,7 +26,12 @@ module.exports = function nodeRangeToSemverRange (range) {
     for (let intersection of union.split(' ')) {
       let lt = intersection[0] === '<';
       let gt = intersection[0] === '>';
-      let eq = (lt || gt) && intersection[1] === '=';
+      if (!lt && !gt) {
+        upperBound = intersection;
+        upperEq = true;
+        break;
+      }
+      let eq = intersection[1] === '=';
       if (!gt) {
         let version = new Semver(intersection.substr(1 + eq));
         if (!upperBound || upperBound.gt(version)) {
