@@ -277,7 +277,7 @@ suite('Range functions', () => {
 suite('Range conversion', () => {
   test('Semver conversions', () => {
     assert.equal(convertRange('>=2.3.4 <3.0.0').toString(), '^2.3.4');
-    assert.equal(convertRange('1 || 2 || 3').toString(), '^3.0.0');
+    assert.equal(convertRange('1 || 2 || 3 || 2.1').toString(), '^3.0.0');
     assert.equal(convertRange('>=2.3.4 <2.4.0').toString(), '~2.3.4');
     assert.equal(convertRange('1 2 3').toString(), '3.0.0');
     assert.equal(convertRange('hello-world').toString(), 'hello-world');
@@ -290,5 +290,10 @@ suite('Range conversion', () => {
     assert.equal(convertRange('^2.3.4 || ~2.5.0').toString(), '^2.3.4');
     assert.equal(convertRange('> =3.1.10').toString(), '^3.1.10');
     assert.equal(convertRange('=0.1.20').toString(), '0.1.20');
+    assert.equal(convertRange('=0.1.20 || =0.1.21 || 0.1.22 || 0.0.1').toString(), '0.1.22');
+    assert.equal(convertRange('=0.1.20 || =0.1.21 || 0.1.22 || ^2 || 0.0.1').toString(), '^2.0.0');
+    assert.equal(convertRange('=0.1.20 || ^0.1').toString(), '~0.1.0');
+    assert.equal(convertRange('=1.1.20 || 1 || ^1.1').toString(), '^1.0.0');
+    assert.equal(convertRange('2.1 2 || 1').toString(), '~2.1.0');
   });
 });

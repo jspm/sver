@@ -50,15 +50,25 @@ module.exports = function nodeRangeToSemverRange (range) {
     }
 
     // if the lower bound is greater than the upper bound then just return the lower bound exactly
-    if (lowerBound && upperBound && lowerBound.gt(upperBound))
-      return new SemverRange(lowerBound.toString());
+    if (lowerBound && upperBound && lowerBound.gt(upperBound)) {
+      let curRange = new SemverRange(lowerBound.toString());
+      // the largest or highest union range wins
+      if (!outRange || !outRange.contains(curRange) && (curRange.gt(outRange) || curRange.contains(outRange)))
+        outRange = curRange;
+      continue;
+    }
 
     // determine the largest semver range satisfying the upper bound
     let upperRange;
     if (upperBound) {
       // if the upper bound has an equality then we return it directly
-      if (upperEq)
-        return new SemverRange(upperBound.toString());
+      if (upperEq) {
+        let curRange = new SemverRange(upperBound.toString());
+        // the largest or highest union range wins
+        if (!outRange || !outRange.contains(curRange) && (curRange.gt(outRange) || curRange.contains(outRange)))
+          outRange = curRange;
+        continue;
+      }
 
       // prerelease ignored in upper bound
       let major = 0, minor = 0, patch = 0, rangeType = '';
@@ -106,7 +116,7 @@ module.exports = function nodeRangeToSemverRange (range) {
     let curRange = upperRange ? lowerRange.intersect(upperRange) || upperRange : lowerRange;
 
     // the largest or highest union range wins
-    if (!outRange || !outRange.contains(curRange) && curRange.gt(outRange))
+    if (!outRange || !outRange.contains(curRange) && (curRange.gt(outRange) || curRange.contains(outRange)))
       outRange = curRange;
   }
   return outRange;
