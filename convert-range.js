@@ -42,7 +42,7 @@ module.exports = function nodeRangeToSemverRange (range) {
       else if (!lt) {
         let eq = intersection[1] === '=';
         let version = new Semver(intersection.substr(1 + eq));
-        if (!upperBound || lowerBound.lt(version)) {
+        if (!lowerBound || lowerBound.lt(version)) {
           lowerBound = version;
           lowerEq = eq;
         }
