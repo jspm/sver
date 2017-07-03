@@ -295,5 +295,8 @@ suite('Range conversion', () => {
     assert.equal(convertRange('=0.1.20 || ^0.1').toString(), '~0.1.0');
     assert.equal(convertRange('=1.1.20 || 1 || ^1.1').toString(), '^1.0.0');
     assert.equal(convertRange('2.1 2 || 1').toString(), '~2.1.0');
+    assert.equal(convertRange('1.2.x').toString(), '~1.2.0');
+    assert.equal(convertRange('1.x.x').toString(), '^1.0.0');
+    assert.equal(convertRange('x.x.x').toString(), '*');
   });
 });

@@ -4,9 +4,12 @@ const { Semver, SemverRange } = require('./sver');
 module.exports = function nodeRangeToSemverRange (range) {
   let parsed = nodeSemver.validRange(range);
 
-  // tag or wildcard
-  if (!parsed || parsed === '*')
+  // tag version
+  if (!parsed)
     return new SemverRange(range);
+
+  if (parsed === '*')
+    return new SemverRange(parsed);
 
   try {
     let semverRange = new SemverRange(range);
