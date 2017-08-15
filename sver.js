@@ -152,7 +152,7 @@ const VERSION = Symbol('version');
 
 class SemverRange {
   constructor (versionRange) {
-    if (versionRange === '*') {
+    if (versionRange === '*' || versionRange === '') {
       this[TYPE] = WILDCARD_RANGE;
       return;
     }

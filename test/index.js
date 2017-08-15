@@ -90,6 +90,8 @@ suite('Semver Major and Minor Ranges', () => {
     let s = new Semver('1.2.3+b');
     assert.equal(bestStableMatch.toString(), '1.2.3');
 
+    range = new SemverRange('');
+
     let bestUnstableMatch = range.bestMatch(versions, true);
     assert.equal(bestUnstableMatch.toString(), '1.3.4-beta');
   });
