@@ -9,9 +9,9 @@ suite('Semver Major and Minor Ranges', () => {
     assert.equal(SemverRange.match('0.0.1', '0.0.0'), false);
     assert.equal(SemverRange.match('0.0.1', '0.0.2'), false);
     assert.equal(SemverRange.match('0.0.1', '0.0.1-betaasdf-asdf'), false);
-    assert.equal(new SemverRange('0.1').toString(), '0.1');
-    assert.equal(new SemverRange('~0.1').toString(), '0.1');
-    assert.equal(new SemverRange('^0.1').toString(), '0.1');
+    assert.equal(new SemverRange('0.1').toString(), '~0.1.0');
+    assert.equal(new SemverRange('~0.1').toString(), '~0.1.0');
+    assert.equal(new SemverRange('^0.1').toString(), '~0.1.0');
   });
   test('Range test 2', () => {
     assert.equal(new Semver('0.1.0-').lt('0.1.0'), true);
@@ -262,9 +262,9 @@ suite('Range functions', () => {
     assert.equal(new SemverRange('~1.1.0').intersect('~1.2.1'), undefined);
     assert.equal(new SemverRange('^1.1.0').intersect('1.2.1-alpha').toString(), '1.2.1-alpha');
     assert.equal(new SemverRange('^1.1.0').intersect('~1.0.1'), undefined);
-    assert.equal(new SemverRange('^1.1.0').intersect('1.3').toString(), '1.3');
-    assert.equal(new SemverRange('^1.1.0').intersect('~1.3').toString(), '1.3');
-    assert.equal(new SemverRange('^1.1.0').intersect('^1.3').toString(), '^1.3');
+    assert.equal(new SemverRange('^1.1.0').intersect('1.3').toString(), '~1.3.0');
+    assert.equal(new SemverRange('^1.1.0').intersect('~1.3').toString(), '~1.3.0');
+    assert.equal(new SemverRange('^1.1.0').intersect('^1.3').toString(), '^1.3.0');
     assert.equal(new SemverRange('^1.1.0').intersect('^1.3.0').toString(), '^1.3.0');
     assert.equal(new SemverRange('^1.1.0').intersect('^1.2.1').toString(), '^1.2.1');
     assert.equal(new SemverRange('^1.1.0').intersect('~1.3.1-alpha').toString(), '~1.3.1-alpha');
