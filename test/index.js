@@ -300,5 +300,10 @@ suite('Range conversion', () => {
     assert.equal(convertRange('1.2.x').toString(), '~1.2.0');
     assert.equal(convertRange('1.x.x').toString(), '^1.0.0');
     assert.equal(convertRange('x.x.x').toString(), '*');
+    assert.equal(convertRange('0').toString(), '0');
+    assert.equal(convertRange('>=0.5').toString(), '~0.5.0');
+    assert.equal(new SemverRange('0').has('0.5.0'), true);
+    assert.equal(new SemverRange('0.5').has('0.5.4'), true);
+    assert.equal(convertRange('>=0.5 0').toString(), '~0.5.0');
   });
 });

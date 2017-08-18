@@ -99,7 +99,10 @@ module.exports = function nodeRangeToSemverRange (range) {
         rangeType = '~';
       }
 
-      upperRange = new SemverRange(rangeType + major + '.' + minor + '.' + patch);
+      if (major === 0 && rangeType === '^')
+        upperRange = new SemverRange('0');
+      else
+        upperRange = new SemverRange(rangeType + major + '.' + minor + '.' + patch);
     }
 
     // determine the lower range semver range
