@@ -84,7 +84,7 @@ class Semver {
   toString () {
     if (this[TAG])
       return this[TAG];
-    return this[MAJOR] + '.' + this[MINOR] + '.' + this[PATCH] + (this[PRE] && this[PRE].length ? '-' + this[PRE].join('.') : '') + (this[BUILD] ? this[BUILD] : '');
+    return this[MAJOR] + '.' + this[MINOR] + '.' + this[PATCH] + (this[PRE] ? '-' + this[PRE].join('.') : '') + (this[BUILD] ? this[BUILD] : '');
   }
   static isValid (version) {
     let semver = version.match(semverRegEx);
@@ -325,8 +325,12 @@ class SemverRange {
       case WILDCARD_RANGE:
         return '*';
       case MAJOR_RANGE:
+        if (version[PRE] && version[PRE].length === 0 && version[PATCH] === 0)
+          return '^' + version[MAJOR] + '.' + version[MINOR];
         return '^' + version.toString();
       case STABLE_RANGE:
+        if (version[PRE] && version[PRE].length === 0 && version[PATCH] === 0)
+          return version[MAJOR] + '.' + version[MINOR];
         return '~' + version.toString();
       case EXACT_RANGE:
         return version.toString();
