@@ -239,7 +239,7 @@ class SemverRange {
     if (!(version instanceof Semver))
       version = new Semver(version);
     if (this[TYPE] === WILDCARD_RANGE)
-      return true;
+      return unstable || !version[PRE];
     if (this[TYPE] === EXACT_RANGE)
       return this[VERSION].eq(version);
     if (version[TAG])
@@ -306,17 +306,10 @@ class SemverRange {
         version = new Semver(version);
       if (!this.has(version, unstable))
         return;
-      if (!unstable && version[PRE]) {
-        if (this[TYPE] === WILDCARD_RANGE || !this[VERSION][PRE] || this[VERSION][MAJOR] !== version[MAJOR] ||
-            this[VERSION][MINOR] !== version[MINOR] || this[VERSION][PATCH] !== version[PATCH])
-          return;
-      }
-      if (!maxSemver) {
+      if (!maxSemver)
         maxSemver = version;
-      }
-      else if (Semver.compare(version, maxSemver) === 1) {
+      else if (Semver.compare(version, maxSemver) === 1)
         maxSemver = version;
-      }
     });
     return maxSemver;
   }

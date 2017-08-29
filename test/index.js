@@ -87,7 +87,6 @@ suite('Semver Major and Minor Ranges', () => {
     let range = new SemverRange('*');
 
     let bestStableMatch = range.bestMatch(versions);
-    let s = new Semver('1.2.3+b');
     assert.equal(bestStableMatch.toString(), '1.2.3');
 
     range = new SemverRange('');
