@@ -118,29 +118,34 @@ class Semver {
     if (!v2[PRE])
       return -1;
     // prerelease comparison
-    for (let i = 0, l = Math.min(v1[PRE].length, v2[PRE].length); i < l; i++) {
-      if (v1[PRE][i] !== v2[PRE][i]) {
-        let isNum1 = v1[PRE][i].match(numRegEx);
-        let isNum2 = v2[PRE][i].match(numRegEx);
-        // numeric has lower precedence
-        if (isNum1 && !isNum2)
-          return -1;
-        if (isNum2 && !isNum1)
-          return 1;
-        // compare parts
-        if (isNum1 && isNum2)
-          return parseInt(v1[PRE][i], 10) > parseInt(v2[PRE][i], 10) ? 1 : -1;
-        else
-          return v1[PRE][i] > v2[PRE][i] ? 1 : -1;
-      }
-    }
-    if (v1[PRE].length === v2[PRE].length)
-      return 0;
-    // more pre-release fields win if equal
-    return v1[PRE].length > v2[PRE].length ? 1 : -1;
+    return prereleaseCompare(v1[PRE], v2[PRE]);
   }
 }
 exports.Semver = Semver;
+
+function prereleaseCompare (v1Pre, v2Pre) {
+  for (let i = 0, l = Math.min(v1Pre.length, v2Pre.length); i < l; i++) {
+    if (v1Pre[i] !== v2Pre[i]) {
+      let isNum1 = v1Pre[i].match(numRegEx);
+      let isNum2 = v2Pre[i].match(numRegEx);
+      // numeric has lower precedence
+      if (isNum1 && !isNum2)
+        return -1;
+      if (isNum2 && !isNum1)
+        return 1;
+      // compare parts
+      if (isNum1 && isNum2)
+        return parseInt(v1Pre[i], 10) > parseInt(v2Pre[i], 10) ? 1 : -1;
+      else
+        return v1Pre[i] > v2Pre[i] ? 1 : -1;
+    }
+  }
+  if (v1Pre.length === v2Pre.length)
+    return 0;
+  // more pre-release fields win if equal
+  return v1Pre.length > v2Pre.length ? 1 : -1;
+
+}
 
 const WILDCARD_RANGE = 0;
 const MAJOR_RANGE = 1;
@@ -244,13 +249,19 @@ class SemverRange {
       return this[VERSION].eq(version);
     if (version[TAG])
       return false;
-    if (version.lt(this[VERSION]))
+    if (this[VERSION][MAJOR] !== version[MAJOR])
       return false;
-    if (version[PRE] && !unstable)
-      return this[VERSION][MAJOR] === version[MAJOR] && this[VERSION][MINOR] === version[MINOR] && this[VERSION][PATCH] === version[PATCH];
-    if (this[TYPE] === MAJOR_RANGE)
-      return this[VERSION][MAJOR] === version[MAJOR];
-    return this[VERSION][MAJOR] === version[MAJOR] && this[VERSION][MINOR] === version[MINOR];
+    if (this[TYPE] === MAJOR_RANGE ? this[VERSION][MINOR] > version[MINOR] : this[VERSION][MINOR] !== version[MINOR])
+      return false;
+    if ((this[TYPE] === MAJOR_RANGE ? this[VERSION][MINOR] === version[MINOR] : true) && this[VERSION][PATCH] > version[PATCH])
+      return false;
+    if (version[PRE] === undefined || version[PRE].length === 0)
+      return true;
+    if (this[VERSION][PRE] === undefined || this[VERSION][PRE].length === 0)
+      return unstable;
+    if (unstable === false && (this[VERSION][MINOR] !== version[MINOR] || this[VERSION][PATCH] !== version[PATCH]))
+      return false;
+    return prereleaseCompare(this[VERSION][PRE], version[PRE]) !== 1;
   }
   contains (range) {
     if (!(range instanceof SemverRange))

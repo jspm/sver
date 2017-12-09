@@ -93,6 +93,10 @@ suite('Semver Major and Minor Ranges', () => {
 
     let bestUnstableMatch = range.bestMatch(versions, true);
     assert.equal(bestUnstableMatch.toString(), '1.3.4-beta');
+
+    range = new SemverRange('^7.0.0');
+    bestUnstableMatch = range.bestMatch(['7.0.0-beta.1', '7.0.0-alpha', 'latest'], true);
+    assert.equal(bestUnstableMatch.toString(), '7.0.0-beta.1');
   });
 });
 
@@ -272,6 +276,10 @@ suite('Range functions', () => {
     assert.equal(new SemverRange('^1.0.5').intersect('~1.0.3').toString(), '~1.0.5');
     assert.equal(new SemverRange('~2.5.0').intersect('^2.5.0-alpha.1').toString(), '~2.5.0');
     assert.equal(new SemverRange('~2.5.0').intersect('^2.5.1-alpha.1').toString(), '~2.5.1-alpha.1');
+  });
+
+  test('Has', () => {
+    assert.equal(new SemverRange('^2.3.4').has('2.5.0'), true);
   });
 });
 
