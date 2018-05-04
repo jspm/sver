@@ -97,6 +97,10 @@ suite('Semver Major and Minor Ranges', () => {
     range = new SemverRange('^7.0.0');
     bestUnstableMatch = range.bestMatch(['7.0.0-beta.1', '7.0.0-alpha', 'latest'], true);
     assert.equal(bestUnstableMatch.toString(), '7.0.0-beta.1');
+
+    range = new SemverRange('^7.0.0');
+    bestStableMatch = range.bestMatch(['7.0.0-beta.1', '7.0.0-alpha', 'latest'], false);
+    assert.equal(bestStableMatch, undefined);
   });
 });
 
