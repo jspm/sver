@@ -244,7 +244,7 @@ class SemverRange {
     if (!(version instanceof Semver))
       version = new Semver(version);
     if (this[TYPE] === WILDCARD_RANGE)
-      return unstable || !version[PRE];
+      return unstable || (!version[PRE] && !version[TAG]);
     if (this[TYPE] === EXACT_RANGE)
       return this[VERSION].eq(version);
     if (version[TAG])
