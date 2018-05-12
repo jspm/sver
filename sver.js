@@ -207,6 +207,12 @@ class SemverRange {
   get isExact () {
     return this[TYPE] === EXACT_RANGE;
   }
+  get isExactSemver () {
+    return this[TYPE] === EXACT_RANGE && this.version[TAG] === undefined;
+  }
+  get isExactTag () {
+    return this[TYPE] === EXACT_RANGE && this.version[TAG] !== undefined;
+  }
   get isStable () {
     return this[TYPE] === STABLE_RANGE;
   }
@@ -215,9 +221,6 @@ class SemverRange {
   }
   get isWildcard () {
     return this[TYPE] === WILDCARD_RANGE;
-  }
-  get isTag () {
-    return this.version[TAG] !== undefined;
   }
   get type () {
     switch (this[TYPE]) {

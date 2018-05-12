@@ -156,7 +156,8 @@ suite('Semver Compare', () => {
   test('Tag range', () => {
     const tagRange = new SemverRange('asdf');
     assert.equal(tagRange.isExact, true);
-    assert.equal(tagRange.isTag, true);
+    assert.equal(tagRange.isExactSemver, false);
+    assert.equal(tagRange.isExactTag, true);
     assert.equal(tagRange.isStable, false);
   });
 
