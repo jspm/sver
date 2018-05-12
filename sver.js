@@ -216,6 +216,9 @@ class SemverRange {
   get isWildcard () {
     return this[TYPE] === WILDCARD_RANGE;
   }
+  get isTag () {
+    return this.version[TAG] !== undefined;
+  }
   get type () {
     switch (this[TYPE]) {
       case WILDCARD_RANGE:

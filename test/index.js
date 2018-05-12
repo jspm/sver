@@ -153,6 +153,13 @@ suite('Semver Compare', () => {
     assert.equal(new SemverRange('0.1').contains('0.1.0-beta'), true);
   });
 
+  test('Tag range', () => {
+    const tagRange = new SemverRange('asdf');
+    assert.equal(tagRange.isExact, true);
+    assert.equal(tagRange.isTag, true);
+    assert.equal(tagRange.isStable, false);
+  });
+
   test('Sorting', () => {
     var ranges1 = ['0.0.1-beta', '0.0.1', '0.1.0', '0.1', '0.1.3-beta.1', '^0.1.0', '*', '2.0.1', '2.1', '2.1.0-beta', '~2.1.0', '^2.0.0'];
     assert.equal(JSON.stringify(ranges1.sort(SemverRange.compare)), JSON.stringify([
