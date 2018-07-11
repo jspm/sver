@@ -332,5 +332,6 @@ suite('Range conversion', () => {
     assert.equal(new SemverRange('0').has('0.5.0'), true);
     assert.equal(new SemverRange('0.5').has('0.5.4'), true);
     assert.equal(convertRange('>=0.5 0').toString(), '~0.5.0');
+    assert.equal(convertRange('>=7.0.0-beta.50 <7.0.0-rc.0').toString(), '~7.0.0-beta.50');
   });
 });

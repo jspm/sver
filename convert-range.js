@@ -73,11 +73,16 @@ module.exports = function nodeRangeToSemverRange (range) {
         continue;
       }
 
-      // prerelease ignored in upper bound
       let major = 0, minor = 0, patch = 0, rangeType = '';
 
+      // if an exact prerelease range, match the lower bound as a range
+      if (upperBound.pre && lowerBound.major === upperBound.major && lowerBound.minor === upperBound.minor && lowerBound.patch === upperBound.patch) {
+        outRange = new SemverRange('~' + lowerBound.toString());
+        continue;
+      }
+
       // <2.0.0 -> ^1.0.0
-      if (upperBound.patch === 0) {
+      else if (upperBound.patch === 0) {
         if (upperBound.minor === 0) {
           if (upperBound.major > 0) {
             major = upperBound.major - 1;
