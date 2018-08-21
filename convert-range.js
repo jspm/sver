@@ -52,6 +52,12 @@ module.exports = function nodeRangeToSemverRange (range) {
       }
     }
 
+    // no upper bound -> wildcard
+    if (!upperBound) {
+      outRange = new SemverRange('*');
+      continue;
+    }
+
     // if the lower bound is greater than the upper bound then just return the lower bound exactly
     if (lowerBound && upperBound && lowerBound.gt(upperBound)) {
       let curRange = new SemverRange(lowerBound.toString());
@@ -109,6 +115,12 @@ module.exports = function nodeRangeToSemverRange (range) {
       else
         upperRange = new SemverRange(rangeType + major + '.' + minor + '.' + patch);
     }
+
+    if (!lowerBound) {
+      outRange = upperRange;
+      continue;
+    }
+
 
     // determine the lower range semver range
     let lowerRange;

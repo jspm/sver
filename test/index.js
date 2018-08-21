@@ -317,7 +317,7 @@ suite('Range conversion', () => {
     assert.equal(convertRange('>2.5.0 <2.5.3').toString(), '~2.5.1');
     assert.equal(convertRange('>2.5.1-alpha <2.5.3').toString(), '~2.5.1-alpha.1');
     assert.equal(convertRange('^2.3.4 || ~2.5.0').toString(), '^2.3.4');
-    assert.equal(convertRange('> =3.1.10').toString(), '^3.1.10');
+    assert.equal(convertRange('> =3.1.10').toString(), '*');
     assert.equal(convertRange('=0.1.20').toString(), '0.1.20');
     assert.equal(convertRange('=0.1.20 || =0.1.21 || 0.1.22 || 0.0.1').toString(), '0.1.22');
     assert.equal(convertRange('=0.1.20 || =0.1.21 || 0.1.22 || ^2 || 0.0.1').toString(), '^2.0.0');
@@ -328,10 +328,13 @@ suite('Range conversion', () => {
     assert.equal(convertRange('1.x.x').toString(), '^1.0.0');
     assert.equal(convertRange('x.x.x').toString(), '*');
     assert.equal(convertRange('0').toString(), '0');
-    assert.equal(convertRange('>=0.5').toString(), '~0.5.0');
+    assert.equal(convertRange('>=0.5').toString(), '*');
     assert.equal(new SemverRange('0').has('0.5.0'), true);
     assert.equal(new SemverRange('0.5').has('0.5.4'), true);
     assert.equal(convertRange('>=0.5 0').toString(), '~0.5.0');
     assert.equal(convertRange('>=7.0.0-beta.50 <7.0.0-rc.0').toString(), '~7.0.0-beta.50');
+    assert.equal(convertRange('>=14.x').toString(), '*');
+    assert.equal(convertRange('<14.x').toString(), '^13.0.0');
+    assert.equal(convertRange('<=14').toString(), '^14.0.0');
   });
 });
