@@ -181,6 +181,11 @@ class SemverRange {
       // empty pre array === support prerelease ranges
       this[VERSION][PRE] = this[VERSION][PRE] || [];
     }
+    // forces hat on 0.x versions
+    else if (versionRange.startsWith('^^')) {
+      this[VERSION] = new Semver(versionRange.substr(2));
+      this[TYPE] = MAJOR_RANGE;
+    }
     else if (versionRange[0] === '^') {
       this[VERSION] = new Semver(versionRange.substr(1));
       if (this[VERSION][MAJOR] === 0) {

@@ -23,7 +23,6 @@ module.exports = function nodeRangeToSemverRange (range) {
 
   let outRange;
   for (let union of parsed.split('||')) {
-
     // compute the intersection into a lowest upper bound and a highest lower bound
     let upperBound, lowerBound, upperEq, lowerEq;
     for (let intersection of union.split(' ')) {
@@ -121,18 +120,18 @@ module.exports = function nodeRangeToSemverRange (range) {
       continue;
     }
 
-
     // determine the lower range semver range
     let lowerRange;
     if (!lowerEq) {
       if (lowerBound.pre)
-        lowerRange = new SemverRange('^' + lowerBound.major + '.' + lowerBound.minor + '.' + lowerBound.patch + '-' + [...lowerBound.pre, 1].join('.'));
+        lowerRange = new SemverRange('^^' + lowerBound.major + '.' + lowerBound.minor + '.' + lowerBound.patch + '-' + [...lowerBound.pre, 1].join('.'));
       else
-        lowerRange = new SemverRange('^' + lowerBound.major + '.' + lowerBound.minor + '.' + (lowerBound.patch + 1));
+        lowerRange = new SemverRange('^^' + lowerBound.major + '.' + lowerBound.minor + '.' + (lowerBound.patch + 1));
     }
     else {
-      lowerRange = new SemverRange('^' + lowerBound.toString());
+      lowerRange = new SemverRange('^^' + lowerBound.toString());
     }
+    lowerRange.rangeType
 
     // we then intersect the upper semver range with the lower semver range
     // if the intersection is empty, we return the upper range only
