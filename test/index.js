@@ -296,6 +296,8 @@ suite('Range functions', () => {
     assert.equal(new SemverRange('^1.0.5').intersect('~1.0.3').toString(), '~1.0.5');
     assert.equal(new SemverRange('~2.5.0').intersect('^2.5.0-alpha.1').toString(), '~2.5.0');
     assert.equal(new SemverRange('~2.5.0').intersect('^2.5.1-alpha.1').toString(), '~2.5.1-alpha.1');
+    assert.equal(new SemverRange('~2.5.0').intersect('^2.5.0-alpha.1').toString(), '~2.5.0');
+    assert.equal(new SemverRange('^7.0.0').intersect('^7.0.0-rc.1').toString(), '^7.0.0');
   });
 
   test('Has', () => {
@@ -338,5 +340,6 @@ suite('Range conversion', () => {
     assert.equal(convertRange('<=14').toString(), '^14.0.0');
     assert.equal(convertRange('0.3.3').toString(), '0.3.3');
     assert.equal(convertRange('0.x').toString(), '0');
+    assert.equal(convertRange('7 || ^7.0.0-rc.2').toString(), '^7.0.0');
   });
 });

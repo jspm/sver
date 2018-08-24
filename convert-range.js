@@ -131,7 +131,6 @@ module.exports = function nodeRangeToSemverRange (range) {
     else {
       lowerRange = new SemverRange('^^' + lowerBound.toString());
     }
-    lowerRange.rangeType
 
     // we then intersect the upper semver range with the lower semver range
     // if the intersection is empty, we return the upper range only
