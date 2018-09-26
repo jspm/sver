@@ -347,7 +347,7 @@ class SemverRange {
            return '^' + version[MAJOR] + '.' + version[MINOR];
         return '^' + version.toString();
       case STABLE_RANGE:
-        if (version[PRE] && version[PRE].length === 0 && version[PATCH] === 0)
+        if (version[PRE] && version[PRE].length === 0 && version[PATCH] === 0 || version[MAJOR] === 0 && version[MINOR] === 0)
           return version[MAJOR] + '.' + version[MINOR];
         return '~' + version.toString();
       case EXACT_RANGE:

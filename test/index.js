@@ -340,6 +340,7 @@ suite('Range conversion', () => {
     assert.equal(convertRange('<=14').toString(), '^14.0.0');
     assert.equal(convertRange('0.3.3').toString(), '0.3.3');
     assert.equal(convertRange('0.x').toString(), '0');
+    assert.equal(convertRange('0.0.x').toString(), '0.0');
     assert.equal(convertRange('7 || ^7.0.0-rc.2').toString(), '^7.0.0');
   });
 });
