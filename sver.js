@@ -86,6 +86,9 @@ class Semver {
       return this[TAG];
     return this[MAJOR] + '.' + this[MINOR] + '.' + this[PATCH] + (this[PRE] ? '-' + this[PRE].join('.') : '') + (this[BUILD] ? this[BUILD] : '');
   }
+  toJSON() {
+    return this.toString();
+  }
   static isValid (version) {
     let semver = version.match(semverRegEx);
     return semver && semver[2] !== undefined && semver[3] !== undefined;
@@ -353,6 +356,9 @@ class SemverRange {
       case EXACT_RANGE:
         return version.toString();
     }
+  }
+  toJSON() {
+    return this.toString();
   }
   static match (range, version, unstable = false) {
     if (!(version instanceof Semver))
