@@ -1,5 +1,4 @@
 const { Semver, SemverRange } = require('../sver.js');
-const convertRange = require('../convert-range.js');
 const assert = require('assert');
 
 suite('Semver Major and Minor Ranges', () => {
@@ -322,43 +321,43 @@ suite('Range functions', () => {
 
 suite('Range conversion (lossless)', () => {
   test('Simple ranges pass through unchanged', () => {
-    assert.equal(convertRange('hello-world').toString(), 'hello-world');
-    assert.equal(convertRange('^0.2.3').toString(), '~0.2.3');
-    assert.equal(convertRange('^0.0.3').toString(), '0.0.3');
-    assert.equal(convertRange('=0.1.20').toString(), '0.1.20');
-    assert.equal(convertRange('0').toString(), '0');
-    assert.equal(convertRange('0.3.3').toString(), '0.3.3');
+    assert.equal(new SemverRange('hello-world').toString(), 'hello-world');
+    assert.equal(new SemverRange('^0.2.3').toString(), '~0.2.3');
+    assert.equal(new SemverRange('^0.0.3').toString(), '0.0.3');
+    assert.equal(new SemverRange('=0.1.20').toString(), '0.1.20');
+    assert.equal(new SemverRange('0').toString(), '0');
+    assert.equal(new SemverRange('0.3.3').toString(), '0.3.3');
     assert.equal(new SemverRange('0').has('0.5.0'), true);
     assert.equal(new SemverRange('0.5').has('0.5.4'), true);
   });
 
   test('X-ranges normalize', () => {
-    assert.equal(convertRange('1.2.x').toString(), '1.2');
-    assert.equal(convertRange('1.x.x').toString(), '^1.0');
-    assert.equal(convertRange('x.x.x').toString(), '*');
-    assert.equal(convertRange('0.x').toString(), '0');
-    assert.equal(convertRange('0.0.x').toString(), '0.0');
+    assert.equal(new SemverRange('1.2.x').toString(), '1.2');
+    assert.equal(new SemverRange('1.x.x').toString(), '^1.0');
+    assert.equal(new SemverRange('x.x.x').toString(), '*');
+    assert.equal(new SemverRange('0.x').toString(), '0');
+    assert.equal(new SemverRange('0.0.x').toString(), '0.0');
   });
 
   test('Comparator ranges preserve structure', () => {
-    assert.equal(convertRange('>=2.3.4 <3.0.0').toString(), '>=2.3.4 <3.0.0');
-    assert.equal(convertRange('>=2.3.4 <2.4.0').toString(), '>=2.3.4 <2.4.0');
-    assert.equal(convertRange('>2.0.0 <=2.5.3').toString(), '>2.0.0 <=2.5.3');
-    assert.equal(convertRange('>2.0.0 <2.5.3').toString(), '>2.0.0 <2.5.3');
-    assert.equal(convertRange('>2.5.0 <2.5.3').toString(), '>2.5.0 <2.5.3');
-    assert.equal(convertRange('>2.5.1-alpha <2.5.3').toString(), '>2.5.1-alpha <2.5.3');
-    assert.equal(convertRange('>=0.5').toString(), '>=0.5.0');
-    assert.equal(convertRange('>=7.0.0-beta.50 <7.0.0-rc.0').toString(), '>=7.0.0-beta.50 <7.0.0-rc.0');
-    assert.equal(convertRange('>=14.x').toString(), '>=14.0.0');
-    assert.equal(convertRange('<14.x').toString(), '<14.0.0');
-    assert.equal(convertRange('<=14').toString(), '<15.0.0');
+    assert.equal(new SemverRange('>=2.3.4 <3.0.0').toString(), '>=2.3.4 <3.0.0');
+    assert.equal(new SemverRange('>=2.3.4 <2.4.0').toString(), '>=2.3.4 <2.4.0');
+    assert.equal(new SemverRange('>2.0.0 <=2.5.3').toString(), '>2.0.0 <=2.5.3');
+    assert.equal(new SemverRange('>2.0.0 <2.5.3').toString(), '>2.0.0 <2.5.3');
+    assert.equal(new SemverRange('>2.5.0 <2.5.3').toString(), '>2.5.0 <2.5.3');
+    assert.equal(new SemverRange('>2.5.1-alpha <2.5.3').toString(), '>2.5.1-alpha <2.5.3');
+    assert.equal(new SemverRange('>=0.5').toString(), '>=0.5.0');
+    assert.equal(new SemverRange('>=7.0.0-beta.50 <7.0.0-rc.0').toString(), '>=7.0.0-beta.50 <7.0.0-rc.0');
+    assert.equal(new SemverRange('>=14.x').toString(), '>=14.0.0');
+    assert.equal(new SemverRange('<14.x').toString(), '<14.0.0');
+    assert.equal(new SemverRange('<=14').toString(), '<15.0.0');
   });
 
   test('Union ranges preserve structure', () => {
-    assert.equal(convertRange('^2.3.4 || ~2.5.0').toString(), '^2.3.4 || ~2.5.0');
-    assert.equal(convertRange('=0.1.20 || =0.1.21 || 0.1.22 || 0.0.1').toString(), '0.1.20 || 0.1.21 || 0.1.22 || 0.0.1');
-    assert.equal(convertRange('=0.1.20 || ^0.1').toString(), '0.1.20 || 0.1');
-    assert.equal(convertRange('7 || ^7.0.0-rc.2').toString(), '^7.0 || ^7.0.0-rc.2');
+    assert.equal(new SemverRange('^2.3.4 || ~2.5.0').toString(), '^2.3.4 || ~2.5.0');
+    assert.equal(new SemverRange('=0.1.20 || =0.1.21 || 0.1.22 || 0.0.1').toString(), '0.1.20 || 0.1.21 || 0.1.22 || 0.0.1');
+    assert.equal(new SemverRange('=0.1.20 || ^0.1').toString(), '0.1.20 || 0.1');
+    assert.equal(new SemverRange('7 || ^7.0.0-rc.2').toString(), '^7.0 || ^7.0.0-rc.2');
   });
 });
 

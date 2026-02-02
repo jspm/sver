@@ -3,6 +3,7 @@
   "version": "2.0.0",
   "description": "Simple Semver and SemverRange classes",
   "main": "sver.js",
+  "types": "index.d.ts",
   "scripts": {
     "test": "mocha -u tdd -R dot"
   },
@@ -22,7 +23,5 @@
   "devDependencies": {
     "mocha": "^10.2.0",
     "semver": "^6.3.0"
-  },
-  "optionalDependencies": {
   }
 }
