@@ -24,6 +24,5 @@
     "semver": "^6.3.0"
   },
   "optionalDependencies": {
-    "semver": "^6.3.0"
   }
 }
