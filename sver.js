@@ -198,6 +198,10 @@ class SemverRange {
   constructor (versionRange) {
     versionRange = versionRange.trim();
 
+    // Normalize: collapse spaces between comparison operators and version numbers
+    // so ">= 1.2.3" is treated the same as ">=1.2.3"
+    versionRange = versionRange.replace(/(>=|<=|>|<|=)\s+/g, '$1');
+
     // Union: split by ||
     if (versionRange.includes('||')) {
       let parts = versionRange.split('||').map(p => p.trim()).filter(Boolean);

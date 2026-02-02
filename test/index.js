@@ -428,6 +428,28 @@ suite('Bound ranges', () => {
     assert.equal(new SemverRange('<2.0.0').toString(), '<2.0.0');
     assert.equal(new SemverRange('<=2.0.0').toString(), '<=2.0.0');
   });
+
+  test('Spaces after comparison operators', () => {
+    // ">= 16.3.0" should parse identically to ">=16.3.0"
+    let range = new SemverRange('>= 16.3.0');
+    assert.equal(range.type, 'lower_bound');
+    assert.equal(range.boundInclusive, true);
+    assert.equal(range.version.toString(), '16.3.0');
+    assert.equal(range.has('16.3.0'), true);
+    assert.equal(range.has('17.0.0'), true);
+    assert.equal(range.has('16.2.0'), false);
+
+    // Other operators with spaces
+    assert.equal(new SemverRange('> 1.2.3').type, 'lower_bound');
+    assert.equal(new SemverRange('> 1.2.3').boundInclusive, false);
+    assert.equal(new SemverRange('< 2.0.0').type, 'upper_bound');
+    assert.equal(new SemverRange('<= 2.0.0').type, 'upper_bound');
+    assert.equal(new SemverRange('= 1.2.3').type, 'exact');
+
+    // Partial versions with spaces
+    assert.equal(new SemverRange('>= 1.2').version.toString(), '1.2.0');
+    assert.equal(new SemverRange('>= 1').version.toString(), '1.0.0');
+  });
 });
 
 suite('Intersection ranges', () => {
@@ -474,6 +496,22 @@ suite('Intersection ranges', () => {
   test('Intersection toString()', () => {
     assert.equal(new SemverRange('>=1.2.3 <2.0.0').toString(), '>=1.2.3 <2.0.0');
     assert.equal(new SemverRange('>1.0.0 <=2.5.3').toString(), '>1.0.0 <=2.5.3');
+  });
+
+  test('Intersection with spaces after operators', () => {
+    // ">= 18 <= 19" is common in npm peerDependencies
+    let range = new SemverRange('>= 18 <= 19');
+    assert.equal(range.type, 'intersection');
+    assert.equal(range.has('18.0.0'), true);
+    assert.equal(range.has('18.5.0'), true);
+    assert.equal(range.has('20.0.0'), false);
+
+    range = new SemverRange('>= 16.3.0 < 18.0.0');
+    assert.equal(range.type, 'intersection');
+    assert.equal(range.has('16.3.0'), true);
+    assert.equal(range.has('17.0.0'), true);
+    assert.equal(range.has('18.0.0'), false);
+    assert.equal(range.has('16.2.0'), false);
   });
 
   test('Hyphen ranges', () => {
