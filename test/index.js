@@ -122,16 +122,31 @@ suite('Semver Compare', () => {
   });
 
   test('Range Compare 1', () => {
-    assert.equal(SemverRange.compare('1.4', '1.4.5'), -1);
-    assert.equal(SemverRange.compare('1.4.5', '1.4'), 1);
+    // Ranges compare by upper bound: 1.4 (upper <1.5.0) > 1.4.5 (upper 1.4.5)
+    assert.equal(SemverRange.compare('1.4', '1.4.5'), 1);
+    assert.equal(SemverRange.compare('1.4.5', '1.4'), -1);
     assert.equal(SemverRange.compare('1.4', '2.0.0'), -1);
     assert.equal(SemverRange.compare('1.0.0', '1.4'), -1);
     assert.equal(SemverRange.compare('1', '2'), -1);
-    assert.equal(SemverRange.compare('1.4.0', '1'), 1);
+    // 1.4.0 (upper 1.4.0) < 1 (upper <2.0.0)
+    assert.equal(SemverRange.compare('1.4.0', '1'), -1);
     assert.equal(SemverRange.compare('1.0.1', '1.0.11'), -1);
     assert.equal(SemverRange.compare('1.0.3', '1.2.11'), -1);
     assert.equal(SemverRange.compare('1.2.11', '1.2.1'), 1);
     assert.equal(SemverRange.compare('1.2.10', '1.2.1'), 1);
+  });
+
+  test('Range compare uses upper bound', () => {
+    // ^1.2.3 (upper <2.0.0) > ~1.2.5 (upper <1.3.0)
+    assert.equal(new SemverRange('^1.2.3').gt(new SemverRange('~1.2.5')), true);
+    assert.equal(SemverRange.compare('^1.2.3', '~1.2.5'), 1);
+    // Same upper bound — falls back to lower bound comparison
+    assert.equal(SemverRange.compare('^1.2.3', '^1.5.0'), -1);
+    assert.equal(SemverRange.compare('~1.2.3', '~1.2.5'), -1);
+    // Wider range is greater even if lower bound is smaller
+    assert.equal(SemverRange.compare('^1.0.0', '~1.5.0'), 1);
+    // Unbounded (lower bound) is greater than bounded
+    assert.equal(SemverRange.compare('>=1.0.0', '^2.0.0'), 1);
   });
 
   test('Compare 2', () => {
@@ -164,7 +179,7 @@ suite('Semver Compare', () => {
   test('Sorting', () => {
     var ranges1 = ['0.0.1-beta', '0.0.1', '0.1.0', '0.1', '0.1.3-beta.1', '^0.1.0', '*', '2.0.1', '2.1', '2.1.0-beta', '~2.1.0', '^2.0.0'];
     assert.equal(JSON.stringify(ranges1.sort(SemverRange.compare)), JSON.stringify([
-      '0.0.1-beta', '0.0.1', '0.1', '^0.1.0', '0.1.0', '0.1.3-beta.1', '^2.0.0', '2.0.1', '2.1', '2.1.0-beta', '~2.1.0', '*'
+      '0.0.1-beta', '0.0.1', '0.1.0', '0.1.3-beta.1', '0.1', '^0.1.0', '2.0.1', '2.1.0-beta', '2.1', '~2.1.0', '^2.0.0', '*'
     ]));
 
     let versions = ['2.4.5', '2.3.4-alpha', '1.2.3', '2.3.4-alpha.2'];
