@@ -174,6 +174,38 @@ function effectiveVersion (range) {
   return null;
 }
 
+function effectiveUpperBound (range) {
+  let type = range[TYPE];
+  if (type === WILDCARD_RANGE || type === LOWER_BOUND)
+    return null; // unbounded
+  if (type === MAJOR_RANGE)
+    return new Semver((range[VERSION][MAJOR] + 1) + '.0.0');
+  if (type === STABLE_RANGE)
+    return new Semver(range[VERSION][MAJOR] + '.' + (range[VERSION][MINOR] + 1) + '.0');
+  if (type === EXACT_RANGE || type === UPPER_BOUND)
+    return range[VERSION];
+  if (type === INTERSECTION_RANGE) {
+    let min = null;
+    for (let r of range[RANGE_SET]) {
+      let ub = effectiveUpperBound(r);
+      if (ub !== null && (min === null || Semver.compare(ub, min) < 0))
+        min = ub;
+    }
+    return min;
+  }
+  if (type === UNION_RANGE) {
+    let max = null;
+    for (let r of range[RANGE_SET]) {
+      let ub = effectiveUpperBound(r);
+      if (ub === null) return null; // one member is unbounded
+      if (max === null || Semver.compare(ub, max) > 0)
+        max = ub;
+    }
+    return max;
+  }
+  return range[VERSION] || null;
+}
+
 function createUpperBoundFromHyphen (verStr) {
   let fullVer = verStr.match(semverRegEx);
   if (fullVer) {
@@ -729,10 +761,26 @@ class SemverRange {
       return 1;
     if (r2[TYPE] === WILDCARD_RANGE)
       return -1;
+    let u1 = effectiveUpperBound(r1);
+    let u2 = effectiveUpperBound(r2);
+    // both unbounded — fall back to lower bound
+    if (u1 === null && u2 === null) {
+      let v1 = effectiveVersion(r1);
+      let v2 = effectiveVersion(r2);
+      if (v1 && v2) return Semver.compare(v1, v2);
+      return 0;
+    }
+    // one unbounded — unbounded is greater
+    if (u1 === null) return 1;
+    if (u2 === null) return -1;
+    let cmp = Semver.compare(u1, u2);
+    if (cmp !== 0)
+      return cmp;
+    // same upper bound — fall back to lower bound
     let v1 = effectiveVersion(r1);
     let v2 = effectiveVersion(r2);
     if (v1 && v2) {
-      let cmp = Semver.compare(v1, v2);
+      cmp = Semver.compare(v1, v2);
       if (cmp !== 0)
         return cmp;
     }
