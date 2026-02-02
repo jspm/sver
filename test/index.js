@@ -305,42 +305,237 @@ suite('Range functions', () => {
   });
 });
 
-suite('Range conversion', () => {
-  test('Semver conversions', () => {
-    assert.equal(convertRange('>=2.3.4 <3.0.0').toString(), '^2.3.4');
-    assert.equal(convertRange('1 || 2 || 3 || 2.1').toString(), '^3.0.0');
-    assert.equal(convertRange('>=2.3.4 <2.4.0').toString(), '~2.3.4');
-    assert.equal(convertRange('1 2 3').toString(), '3.0.0');
+suite('Range conversion (lossless)', () => {
+  test('Simple ranges pass through unchanged', () => {
     assert.equal(convertRange('hello-world').toString(), 'hello-world');
     assert.equal(convertRange('^0.2.3').toString(), '~0.2.3');
     assert.equal(convertRange('^0.0.3').toString(), '0.0.3');
-    assert.equal(convertRange('>2.0.0 <=2.5.3').toString(), '2.5.3');
-    assert.equal(convertRange('>2.0.0 <2.5.3').toString(), '~2.5.0');
-    assert.equal(convertRange('>2.5.0 <2.5.3').toString(), '~2.5.1');
-    assert.equal(convertRange('>2.5.1-alpha <2.5.3').toString(), '~2.5.1-alpha.1');
-    assert.equal(convertRange('^2.3.4 || ~2.5.0').toString(), '^2.3.4');
-    assert.equal(convertRange('> =3.1.10').toString(), '*');
     assert.equal(convertRange('=0.1.20').toString(), '0.1.20');
-    assert.equal(convertRange('=0.1.20 || =0.1.21 || 0.1.22 || 0.0.1').toString(), '0.1.22');
-    assert.equal(convertRange('=0.1.20 || =0.1.21 || 0.1.22 || ^2 || 0.0.1').toString(), '^2.0.0');
-    assert.equal(convertRange('=0.1.20 || ^0.1').toString(), '~0.1.0');
-    assert.equal(convertRange('=1.1.20 || 1 || ^1.1').toString(), '^1.0.0');
-    assert.equal(convertRange('2.1 2 || 1').toString(), '~2.1.0');
-    assert.equal(convertRange('1.2.x').toString(), '~1.2.0');
-    assert.equal(convertRange('1.x.x').toString(), '^1.0.0');
-    assert.equal(convertRange('x.x.x').toString(), '*');
     assert.equal(convertRange('0').toString(), '0');
-    assert.equal(convertRange('>=0.5').toString(), '*');
+    assert.equal(convertRange('0.3.3').toString(), '0.3.3');
     assert.equal(new SemverRange('0').has('0.5.0'), true);
     assert.equal(new SemverRange('0.5').has('0.5.4'), true);
-    assert.equal(convertRange('>=0.5 0').toString(), '^0.5.0');
-    assert.equal(convertRange('>=7.0.0-beta.50 <7.0.0-rc.0').toString(), '~7.0.0-beta.50');
-    assert.equal(convertRange('>=14.x').toString(), '*');
-    assert.equal(convertRange('<14.x').toString(), '^13.0.0');
-    assert.equal(convertRange('<=14').toString(), '^14.0.0');
-    assert.equal(convertRange('0.3.3').toString(), '0.3.3');
+  });
+
+  test('X-ranges normalize', () => {
+    assert.equal(convertRange('1.2.x').toString(), '1.2');
+    assert.equal(convertRange('1.x.x').toString(), '^1.0');
+    assert.equal(convertRange('x.x.x').toString(), '*');
     assert.equal(convertRange('0.x').toString(), '0');
     assert.equal(convertRange('0.0.x').toString(), '0.0');
-    assert.equal(convertRange('7 || ^7.0.0-rc.2').toString(), '^7.0.0');
+  });
+
+  test('Comparator ranges preserve structure', () => {
+    assert.equal(convertRange('>=2.3.4 <3.0.0').toString(), '>=2.3.4 <3.0.0');
+    assert.equal(convertRange('>=2.3.4 <2.4.0').toString(), '>=2.3.4 <2.4.0');
+    assert.equal(convertRange('>2.0.0 <=2.5.3').toString(), '>2.0.0 <=2.5.3');
+    assert.equal(convertRange('>2.0.0 <2.5.3').toString(), '>2.0.0 <2.5.3');
+    assert.equal(convertRange('>2.5.0 <2.5.3').toString(), '>2.5.0 <2.5.3');
+    assert.equal(convertRange('>2.5.1-alpha <2.5.3').toString(), '>2.5.1-alpha <2.5.3');
+    assert.equal(convertRange('>=0.5').toString(), '>=0.5.0');
+    assert.equal(convertRange('>=7.0.0-beta.50 <7.0.0-rc.0').toString(), '>=7.0.0-beta.50 <7.0.0-rc.0');
+    assert.equal(convertRange('>=14.x').toString(), '>=14.0.0');
+    assert.equal(convertRange('<14.x').toString(), '<14.0.0');
+    assert.equal(convertRange('<=14').toString(), '<15.0.0');
+  });
+
+  test('Union ranges preserve structure', () => {
+    assert.equal(convertRange('^2.3.4 || ~2.5.0').toString(), '^2.3.4 || ~2.5.0');
+    assert.equal(convertRange('=0.1.20 || =0.1.21 || 0.1.22 || 0.0.1').toString(), '0.1.20 || 0.1.21 || 0.1.22 || 0.0.1');
+    assert.equal(convertRange('=0.1.20 || ^0.1').toString(), '0.1.20 || 0.1');
+    assert.equal(convertRange('7 || ^7.0.0-rc.2').toString(), '^7.0 || ^7.0.0-rc.2');
+  });
+});
+
+suite('Bound ranges', () => {
+  test('Lower bound parsing', () => {
+    let range = new SemverRange('>=1.2.3');
+    assert.equal(range.type, 'lower_bound');
+    assert.equal(range.isLowerBound, true);
+    assert.equal(range.boundInclusive, true);
+    assert.equal(range.version.toString(), '1.2.3');
+
+    range = new SemverRange('>1.2.3');
+    assert.equal(range.type, 'lower_bound');
+    assert.equal(range.boundInclusive, false);
+  });
+
+  test('Upper bound parsing', () => {
+    let range = new SemverRange('<2.0.0');
+    assert.equal(range.type, 'upper_bound');
+    assert.equal(range.isUpperBound, true);
+    assert.equal(range.boundInclusive, false);
+    assert.equal(range.version.toString(), '2.0.0');
+
+    range = new SemverRange('<=2.0.0');
+    assert.equal(range.type, 'upper_bound');
+    assert.equal(range.boundInclusive, true);
+  });
+
+  test('Partial version bounds', () => {
+    // >=1.2 → >=1.2.0
+    assert.equal(new SemverRange('>=1.2').version.toString(), '1.2.0');
+    assert.equal(new SemverRange('>=1.2').boundInclusive, true);
+    // >1.2 → >=1.3.0
+    assert.equal(new SemverRange('>1.2').version.toString(), '1.3.0');
+    assert.equal(new SemverRange('>1.2').boundInclusive, true);
+    // <1.2 → <1.2.0
+    assert.equal(new SemverRange('<1.2').version.toString(), '1.2.0');
+    assert.equal(new SemverRange('<1.2').boundInclusive, false);
+    // <=1.2 → <1.3.0
+    assert.equal(new SemverRange('<=1.2').version.toString(), '1.3.0');
+    assert.equal(new SemverRange('<=1.2').boundInclusive, false);
+    // >=1 → >=1.0.0
+    assert.equal(new SemverRange('>=1').version.toString(), '1.0.0');
+    // >1 → >=2.0.0
+    assert.equal(new SemverRange('>1').version.toString(), '2.0.0');
+    // <1 → <1.0.0
+    assert.equal(new SemverRange('<1').version.toString(), '1.0.0');
+    // <=1 → <2.0.0
+    assert.equal(new SemverRange('<=1').version.toString(), '2.0.0');
+  });
+
+  test('Lower bound has()', () => {
+    assert.equal(new SemverRange('>=1.2.3').has('1.2.3'), true);
+    assert.equal(new SemverRange('>=1.2.3').has('1.2.4'), true);
+    assert.equal(new SemverRange('>=1.2.3').has('2.0.0'), true);
+    assert.equal(new SemverRange('>=1.2.3').has('1.2.2'), false);
+    assert.equal(new SemverRange('>=1.2.3').has('0.9.0'), false);
+    assert.equal(new SemverRange('>1.2.3').has('1.2.3'), false);
+    assert.equal(new SemverRange('>1.2.3').has('1.2.4'), true);
+  });
+
+  test('Upper bound has()', () => {
+    assert.equal(new SemverRange('<2.0.0').has('1.9.9'), true);
+    assert.equal(new SemverRange('<2.0.0').has('2.0.0'), false);
+    assert.equal(new SemverRange('<2.0.0').has('2.0.1'), false);
+    assert.equal(new SemverRange('<=2.0.0').has('2.0.0'), true);
+    assert.equal(new SemverRange('<=2.0.0').has('2.0.1'), false);
+  });
+
+  test('Bound prerelease behavior', () => {
+    // Standalone bound: pre only matches if bound has pre on same tuple
+    assert.equal(new SemverRange('>=1.2.3-alpha').has('1.2.3-beta'), true);
+    assert.equal(new SemverRange('>=1.2.3-alpha').has('1.2.4-beta'), false);
+    assert.equal(new SemverRange('>=1.2.3-alpha').has('1.2.4-beta', true), true);
+    assert.equal(new SemverRange('>=1.2.3').has('1.2.4-beta'), false);
+    assert.equal(new SemverRange('>=1.2.3').has('1.2.4-beta', true), true);
+  });
+
+  test('Bound toString()', () => {
+    assert.equal(new SemverRange('>=1.2.3').toString(), '>=1.2.3');
+    assert.equal(new SemverRange('>1.2.3').toString(), '>1.2.3');
+    assert.equal(new SemverRange('<2.0.0').toString(), '<2.0.0');
+    assert.equal(new SemverRange('<=2.0.0').toString(), '<=2.0.0');
+  });
+});
+
+suite('Intersection ranges', () => {
+  test('Intersection parsing', () => {
+    let range = new SemverRange('>=1.2.3 <2.0.0');
+    assert.equal(range.type, 'intersection');
+    assert.equal(range.isIntersection, true);
+    assert.equal(range.rangeSet.length, 2);
+    assert.equal(range.rangeSet[0].type, 'lower_bound');
+    assert.equal(range.rangeSet[1].type, 'upper_bound');
+  });
+
+  test('Intersection has()', () => {
+    let range = new SemverRange('>=1.2.3 <2.0.0');
+    assert.equal(range.has('1.2.3'), true);
+    assert.equal(range.has('1.5.0'), true);
+    assert.equal(range.has('1.9.9'), true);
+    assert.equal(range.has('2.0.0'), false);
+    assert.equal(range.has('1.2.2'), false);
+    assert.equal(range.has('0.9.0'), false);
+  });
+
+  test('Intersection with arbitrary bounds', () => {
+    // This was lossy before: >=1.2.3 <1.5.0 could not be represented
+    let range = new SemverRange('>=1.2.3 <1.5.0');
+    assert.equal(range.has('1.2.3'), true);
+    assert.equal(range.has('1.4.9'), true);
+    assert.equal(range.has('1.5.0'), false);
+    assert.equal(range.has('1.2.2'), false);
+  });
+
+  test('Intersection prerelease at set level', () => {
+    let range = new SemverRange('>=1.2.3-alpha <2.0.0');
+    // Same tuple: should match
+    assert.equal(range.has('1.2.3-beta'), true);
+    // Different tuple without unstable: should not match
+    assert.equal(range.has('1.2.4-beta'), false);
+    // Different tuple with unstable: should match
+    assert.equal(range.has('1.2.4-beta', true), true);
+    // Stable versions should match
+    assert.equal(range.has('1.5.0'), true);
+  });
+
+  test('Intersection toString()', () => {
+    assert.equal(new SemverRange('>=1.2.3 <2.0.0').toString(), '>=1.2.3 <2.0.0');
+    assert.equal(new SemverRange('>1.0.0 <=2.5.3').toString(), '>1.0.0 <=2.5.3');
+  });
+
+  test('Hyphen ranges', () => {
+    let range = new SemverRange('1.2.3 - 2.3.4');
+    assert.equal(range.type, 'intersection');
+    assert.equal(range.has('1.2.3'), true);
+    assert.equal(range.has('2.0.0'), true);
+    assert.equal(range.has('2.3.4'), true);
+    assert.equal(range.has('2.3.5'), false);
+    assert.equal(range.has('1.2.2'), false);
+
+    // Partial upper bound: 1.2.3 - 2.3 means >=1.2.3 <2.4.0
+    range = new SemverRange('1.2.3 - 2.3');
+    assert.equal(range.has('2.3.9'), true);
+    assert.equal(range.has('2.4.0'), false);
+  });
+});
+
+suite('Union ranges', () => {
+  test('Union parsing', () => {
+    let range = new SemverRange('^1.0.0 || ^2.0.0');
+    assert.equal(range.type, 'union');
+    assert.equal(range.isUnion, true);
+    assert.equal(range.rangeSet.length, 2);
+  });
+
+  test('Union has()', () => {
+    let range = new SemverRange('^1.0.0 || ^2.0.0');
+    assert.equal(range.has('1.5.0'), true);
+    assert.equal(range.has('2.5.0'), true);
+    assert.equal(range.has('3.0.0'), false);
+    assert.equal(range.has('0.9.0'), false);
+  });
+
+  test('Union with complex members', () => {
+    // This was lossy before: union of arbitrary ranges
+    let range = new SemverRange('>=1.2.3 <1.5.0 || >=2.0.0 <3.0.0');
+    assert.equal(range.has('1.3.0'), true);
+    assert.equal(range.has('1.5.0'), false);
+    assert.equal(range.has('1.8.0'), false);
+    assert.equal(range.has('2.5.0'), true);
+    assert.equal(range.has('3.0.0'), false);
+  });
+
+  test('Union toString()', () => {
+    assert.equal(new SemverRange('^1.0.0 || ^2.0.0').toString(), '^1.0.0 || ^2.0.0');
+    assert.equal(new SemverRange('~1.2.0 || ~1.4.0 || ^2.0.0').toString(), '~1.2.0 || ~1.4.0 || ^2.0.0');
+  });
+
+  test('Union bestMatch', () => {
+    let range = new SemverRange('^1.0.0 || ^3.0.0');
+    let best = range.bestMatch(['1.0.0', '1.5.0', '2.0.0', '3.0.0', '3.2.0']);
+    assert.equal(best.toString(), '3.2.0');
+
+    // Skips 2.x since neither ^1 nor ^3 matches it
+    best = range.bestMatch(['1.0.0', '1.5.0', '2.5.0']);
+    assert.equal(best.toString(), '1.5.0');
+  });
+
+  test('Union isValid', () => {
+    assert.equal(SemverRange.isValid('^1.0.0 || ^2.0.0'), true);
+    assert.equal(SemverRange.isValid('>=1.2.3 <2.0.0'), true);
+    assert.equal(SemverRange.isValid('>=1.2.3'), true);
   });
 });

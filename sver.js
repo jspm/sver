@@ -154,12 +154,93 @@ const WILDCARD_RANGE = 0;
 const MAJOR_RANGE = 1;
 const STABLE_RANGE = 2;
 const EXACT_RANGE = 3;
+const LOWER_BOUND = 4;
+const UPPER_BOUND = 5;
+const INTERSECTION_RANGE = 6;
+const UNION_RANGE = 7;
 
 const TYPE = Symbol('type');
 const VERSION = Symbol('version');
+const RANGE_SET = Symbol('rangeSet');
+const BOUND_INCLUSIVE = Symbol('boundInclusive');
+
+const comparatorRegEx = /^(>=|<=|>|<|=)\s*(.+)$/;
+const partialRegEx = /^(0|[1-9]\d*)(?:\.(0|[1-9]\d*)(?:\.(0|[1-9]\d*)(?:-([\da-z-]+(?:\.[\da-z-]+)*))?(\+[\da-z-]+)?)?)?$/i;
+
+function effectiveVersion (range) {
+  if (range[VERSION]) return range[VERSION];
+  if (range[RANGE_SET] && range[RANGE_SET].length > 0)
+    return effectiveVersion(range[RANGE_SET][0]);
+  return null;
+}
+
+function createUpperBoundFromHyphen (verStr) {
+  let fullVer = verStr.match(semverRegEx);
+  if (fullVer) {
+    // Full version: <=B
+    return new SemverRange('<=' + verStr);
+  }
+  let partialMatch = verStr.match(partialRegEx);
+  if (partialMatch) {
+    let major = parseInt(partialMatch[1], 10);
+    let hasMinor = partialMatch[2] !== undefined;
+    let minor = hasMinor ? parseInt(partialMatch[2], 10) : undefined;
+    if (hasMinor) {
+      return new SemverRange('<' + major + '.' + (minor + 1) + '.0');
+    } else {
+      return new SemverRange('<' + (major + 1) + '.0.0');
+    }
+  }
+  return new SemverRange('<=' + verStr);
+}
 
 class SemverRange {
   constructor (versionRange) {
+    versionRange = versionRange.trim();
+
+    // Union: split by ||
+    if (versionRange.includes('||')) {
+      let parts = versionRange.split('||').map(p => p.trim()).filter(Boolean);
+      if (parts.length >= 2) {
+        this[TYPE] = UNION_RANGE;
+        this[RANGE_SET] = parts.map(p => new SemverRange(p));
+        return;
+      }
+      if (parts.length === 1)
+        versionRange = parts[0];
+      else {
+        this[TYPE] = WILDCARD_RANGE;
+        return;
+      }
+    }
+
+    // Hyphen range: A - B (spaces around -)
+    let hyphenMatch = versionRange.match(/^(\S+)\s+-\s+(\S+)$/);
+    if (hyphenMatch) {
+      this[TYPE] = INTERSECTION_RANGE;
+      this[RANGE_SET] = [
+        new SemverRange('>=' + hyphenMatch[1]),
+        createUpperBoundFromHyphen(hyphenMatch[2])
+      ];
+      return;
+    }
+
+    // Space-separated comparators: intersection
+    let tokens = versionRange.split(/\s+/);
+    if (tokens.length > 1) {
+      this[TYPE] = INTERSECTION_RANGE;
+      this[RANGE_SET] = tokens.map(t => new SemverRange(t));
+      return;
+    }
+
+    // Normalize x-ranges: 1.2.x → 1.2, 1.x → 1, x → *
+    versionRange = versionRange.replace(/\.[xX*]/g, '');
+    if (/^[xX*]$/.test(versionRange) || versionRange === '') {
+      versionRange = '*';
+    }
+
+    // === Existing simple range parsing ===
+
     if (versionRange === '*' || versionRange === '') {
       this[TYPE] = WILDCARD_RANGE;
       return;
@@ -183,9 +264,10 @@ class SemverRange {
       }
       // empty pre array === support prerelease ranges
       this[VERSION][PRE] = this[VERSION][PRE] || [];
+      return;
     }
     // forces hat on 0.x versions
-    else if (versionRange.startsWith('^^')) {
+    if (versionRange.startsWith('^^')) {
       this[VERSION] = new Semver(versionRange.substr(2));
       this[TYPE] = MAJOR_RANGE;
     }
@@ -205,13 +287,117 @@ class SemverRange {
       this[VERSION] = new Semver(versionRange.substr(1));
       this[TYPE] = STABLE_RANGE;
     }
+    // === New: Comparator operators (>=, >, <=, <, =) ===
+    else if (comparatorRegEx.test(versionRange)) {
+      let match = versionRange.match(comparatorRegEx);
+      this._parseComparator(match[1], match[2].trim());
+      return;
+    }
     else {
       this[VERSION] = new Semver(versionRange);
       this[TYPE] = EXACT_RANGE;
     }
-    if (this[VERSION][TAG] && this[TYPE] !== EXACT_RANGE)
+    if (this[VERSION] && this[VERSION][TAG] && this[TYPE] !== EXACT_RANGE)
       this[TYPE] = EXACT_RANGE;
   }
+
+  _parseComparator (op, verStr) {
+    if (op === '=') {
+      let fullVer = verStr.match(semverRegEx);
+      if (fullVer) {
+        this[VERSION] = new Semver(verStr);
+        this[TYPE] = EXACT_RANGE;
+      } else {
+        // Partial: =1.2 acts like 1.2 range
+        let temp = new SemverRange(verStr);
+        this[TYPE] = temp[TYPE];
+        this[VERSION] = temp[VERSION];
+        if (temp[RANGE_SET]) this[RANGE_SET] = temp[RANGE_SET];
+        if (temp[BOUND_INCLUSIVE] !== undefined) this[BOUND_INCLUSIVE] = temp[BOUND_INCLUSIVE];
+      }
+      return;
+    }
+
+    let isLower = op === '>=' || op === '>';
+    let isInclusive = op === '>=' || op === '<=';
+
+    let partialMatch = verStr.match(partialRegEx);
+    if (!partialMatch) {
+      // Not a valid version — treat entire thing as exact tag
+      this[VERSION] = new Semver(op + verStr);
+      this[TYPE] = EXACT_RANGE;
+      return;
+    }
+
+    let major = parseInt(partialMatch[1], 10);
+    let hasMinor = partialMatch[2] !== undefined;
+    let minor = hasMinor ? parseInt(partialMatch[2], 10) : undefined;
+    let hasPatch = partialMatch[3] !== undefined;
+
+    if (hasPatch) {
+      // Full version: >=1.2.3 or <1.2.3 etc.
+      this[VERSION] = new Semver(verStr);
+      this[TYPE] = isLower ? LOWER_BOUND : UPPER_BOUND;
+      this[BOUND_INCLUSIVE] = isInclusive;
+    }
+    else if (hasMinor) {
+      if (isLower) {
+        if (isInclusive) {
+          // >=1.2 → >=1.2.0
+          this[VERSION] = new Semver(major + '.' + minor + '.0');
+        } else {
+          // >1.2 → >=1.3.0
+          this[VERSION] = new Semver(major + '.' + (minor + 1) + '.0');
+        }
+        this[TYPE] = LOWER_BOUND;
+        this[BOUND_INCLUSIVE] = true;
+      } else {
+        if (isInclusive) {
+          // <=1.2 → <1.3.0
+          this[VERSION] = new Semver(major + '.' + (minor + 1) + '.0');
+        } else {
+          // <1.2 → <1.2.0
+          this[VERSION] = new Semver(major + '.' + minor + '.0');
+        }
+        this[TYPE] = UPPER_BOUND;
+        this[BOUND_INCLUSIVE] = false;
+      }
+    }
+    else {
+      if (isLower) {
+        if (isInclusive) {
+          // >=1 → >=1.0.0
+          this[VERSION] = new Semver(major + '.0.0');
+        } else {
+          // >1 → >=2.0.0
+          this[VERSION] = new Semver((major + 1) + '.0.0');
+        }
+        this[TYPE] = LOWER_BOUND;
+        this[BOUND_INCLUSIVE] = true;
+      } else {
+        if (isInclusive) {
+          // <=1 → <2.0.0
+          this[VERSION] = new Semver((major + 1) + '.0.0');
+        } else {
+          // <1 → <1.0.0
+          this[VERSION] = new Semver(major + '.0.0');
+        }
+        this[TYPE] = UPPER_BOUND;
+        this[BOUND_INCLUSIVE] = false;
+      }
+    }
+  }
+
+  _testBound (version) {
+    if (version[TAG]) return false;
+    let cmp = Semver.compare(version, this[VERSION]);
+    if (this[TYPE] === LOWER_BOUND)
+      return this[BOUND_INCLUSIVE] ? cmp >= 0 : cmp > 0;
+    if (this[TYPE] === UPPER_BOUND)
+      return this[BOUND_INCLUSIVE] ? cmp <= 0 : cmp < 0;
+    return false;
+  }
+
   get isExact () {
     return this[TYPE] === EXACT_RANGE;
   }
@@ -230,6 +416,18 @@ class SemverRange {
   get isWildcard () {
     return this[TYPE] === WILDCARD_RANGE;
   }
+  get isLowerBound () {
+    return this[TYPE] === LOWER_BOUND;
+  }
+  get isUpperBound () {
+    return this[TYPE] === UPPER_BOUND;
+  }
+  get isIntersection () {
+    return this[TYPE] === INTERSECTION_RANGE;
+  }
+  get isUnion () {
+    return this[TYPE] === UNION_RANGE;
+  }
   get type () {
     switch (this[TYPE]) {
       case WILDCARD_RANGE:
@@ -240,10 +438,24 @@ class SemverRange {
         return 'stable';
       case EXACT_RANGE:
         return 'exact';
+      case LOWER_BOUND:
+        return 'lower_bound';
+      case UPPER_BOUND:
+        return 'upper_bound';
+      case INTERSECTION_RANGE:
+        return 'intersection';
+      case UNION_RANGE:
+        return 'union';
     }
   }
   get version () {
     return this[VERSION];
+  }
+  get rangeSet () {
+    return this[RANGE_SET];
+  }
+  get boundInclusive () {
+    return this[BOUND_INCLUSIVE];
   }
   gt (range) {
     return SemverRange.compare(this, range) === 1;
@@ -257,39 +469,121 @@ class SemverRange {
   has (version, unstable = false) {
     if (!(version instanceof Semver))
       version = new Semver(version);
+
+    // --- Existing simple types ---
     if (this[TYPE] === WILDCARD_RANGE)
       return unstable || (!version[PRE] && !version[TAG]);
     if (this[TYPE] === EXACT_RANGE)
       return this[VERSION].eq(version);
-    if (version[TAG])
-      return false;
-    if (this[VERSION][MAJOR] !== version[MAJOR])
-      return false;
-    if (this[TYPE] === MAJOR_RANGE ? this[VERSION][MINOR] > version[MINOR] : this[VERSION][MINOR] !== version[MINOR])
-      return false;
-    if ((this[TYPE] === MAJOR_RANGE ? this[VERSION][MINOR] === version[MINOR] : true) && this[VERSION][PATCH] > version[PATCH])
-      return false;
-    if (version[PRE] === undefined || version[PRE].length === 0)
-      return true;
-    if (this[VERSION][PRE] === undefined || this[VERSION][PRE].length === 0)
-      return unstable;
-    if (unstable === false && (this[VERSION][MINOR] !== version[MINOR] || this[VERSION][PATCH] !== version[PATCH]))
-      return false;
-    return prereleaseCompare(this[VERSION][PRE], version[PRE]) !== 1;
+    if (this[TYPE] === MAJOR_RANGE || this[TYPE] === STABLE_RANGE) {
+      if (version[TAG])
+        return false;
+      if (this[VERSION][MAJOR] !== version[MAJOR])
+        return false;
+      if (this[TYPE] === MAJOR_RANGE ? this[VERSION][MINOR] > version[MINOR] : this[VERSION][MINOR] !== version[MINOR])
+        return false;
+      if ((this[TYPE] === MAJOR_RANGE ? this[VERSION][MINOR] === version[MINOR] : true) && this[VERSION][PATCH] > version[PATCH])
+        return false;
+      if (version[PRE] === undefined || version[PRE].length === 0)
+        return true;
+      if (this[VERSION][PRE] === undefined || this[VERSION][PRE].length === 0)
+        return unstable;
+      if (unstable === false && (this[VERSION][MINOR] !== version[MINOR] || this[VERSION][PATCH] !== version[PATCH]))
+        return false;
+      return prereleaseCompare(this[VERSION][PRE], version[PRE]) !== 1;
+    }
+
+    // --- New: Bounds ---
+    if (this[TYPE] === LOWER_BOUND || this[TYPE] === UPPER_BOUND) {
+      if (version[TAG]) return false;
+      // Prerelease rule for standalone bounds: version with pre only matches
+      // if the bound's version has pre on the same [major, minor, patch]
+      if (!unstable && version[PRE] && version[PRE].length) {
+        if (!this[VERSION][PRE] || !this[VERSION][PRE].length ||
+            this[VERSION][MAJOR] !== version[MAJOR] ||
+            this[VERSION][MINOR] !== version[MINOR] ||
+            this[VERSION][PATCH] !== version[PATCH])
+          return false;
+      }
+      return this._testBound(version);
+    }
+
+    // --- New: Intersection ---
+    if (this[TYPE] === INTERSECTION_RANGE) {
+      if (version[TAG]) {
+        // Tags can only match exact ranges within the intersection
+        return this[RANGE_SET].every(r => r.has(version, unstable));
+      }
+      // Prerelease rule at set level: if version has pre and !unstable,
+      // at least one member must have pre on the same [major, minor, patch]
+      if (!unstable && version[PRE] && version[PRE].length) {
+        let hasTupleMatch = this[RANGE_SET].some(r => {
+          let v = r[VERSION];
+          return v && v[PRE] && v[PRE].length &&
+            v[MAJOR] === version[MAJOR] &&
+            v[MINOR] === version[MINOR] &&
+            v[PATCH] === version[PATCH];
+        });
+        if (!hasTupleMatch) return false;
+      }
+      // All members must match — bounds use _testBound (pure comparison),
+      // other types use has() with unstable=true (pre rule already checked)
+      return this[RANGE_SET].every(r => {
+        if (r[TYPE] === LOWER_BOUND || r[TYPE] === UPPER_BOUND)
+          return r._testBound(version);
+        return r.has(version, !unstable ? true : unstable);
+      });
+    }
+
+    // --- New: Union ---
+    if (this[TYPE] === UNION_RANGE) {
+      return this[RANGE_SET].some(r => r.has(version, unstable));
+    }
+
+    return false;
   }
   contains (range) {
     if (!(range instanceof SemverRange))
       range = new SemverRange(range);
+
+    // Wildcard contains everything
     if (this[TYPE] === WILDCARD_RANGE)
       return true;
     if (range[TYPE] === WILDCARD_RANGE)
       return false;
-    return range[TYPE] >= this[TYPE] && this.has(range[VERSION], true);
+
+    // Union this: contains if any member contains
+    if (this[TYPE] === UNION_RANGE)
+      return this[RANGE_SET].some(r => r.contains(range));
+
+    // Range is union: must contain all members
+    if (range[TYPE] === UNION_RANGE)
+      return range[RANGE_SET].every(r => this.contains(r));
+
+    // Range is intersection: B ⊆ each Bi, so if we contain any Bi, we contain B
+    if (range[TYPE] === INTERSECTION_RANGE)
+      return range[RANGE_SET].some(r => this.contains(r));
+
+    // This is intersection: must satisfy all members
+    if (this[TYPE] === INTERSECTION_RANGE)
+      return this[RANGE_SET].every(r => r.contains(range));
+
+    // Both are simple types (original 4): use original logic
+    if (this[TYPE] <= EXACT_RANGE && range[TYPE] <= EXACT_RANGE)
+      return range[TYPE] >= this[TYPE] && this.has(range[VERSION], true);
+
+    // Bound containing exact: check if we have the version
+    if ((this[TYPE] === LOWER_BOUND || this[TYPE] === UPPER_BOUND) && range[TYPE] === EXACT_RANGE)
+      return this.has(range[VERSION], true);
+
+    // Conservative fallback
+    return false;
   }
   intersect (range) {
     if (!(range instanceof SemverRange))
       range = new SemverRange(range);
 
+    // Wildcard cases
     if (this[TYPE] === WILDCARD_RANGE && range[TYPE] === WILDCARD_RANGE)
       return this;
     if (this[TYPE] === WILDCARD_RANGE)
@@ -297,32 +591,71 @@ class SemverRange {
     if (range[TYPE] === WILDCARD_RANGE)
       return this;
 
+    // Exact cases
     if (this[TYPE] === EXACT_RANGE)
       return range.has(this[VERSION], true) ? this : undefined;
     if (range[TYPE] === EXACT_RANGE)
       return this.has(range[VERSION], true) ? range : undefined;
 
-    let higherRange, lowerRange, polarity;
-    if (range[VERSION].gt(this[VERSION])) {
-      higherRange = range;
-      lowerRange = this;
-      polarity = true;
+    // Union: distribute
+    if (this[TYPE] === UNION_RANGE) {
+      let results = this[RANGE_SET].map(r => r.intersect(range)).filter(Boolean);
+      if (results.length === 0) return undefined;
+      if (results.length === 1) return results[0];
+      let union = Object.create(SemverRange.prototype);
+      union[TYPE] = UNION_RANGE;
+      union[RANGE_SET] = results;
+      return union;
     }
-    else {
-      higherRange = this;
-      lowerRange = range;
-      polarity = false;
+    if (range[TYPE] === UNION_RANGE)
+      return range.intersect(this);
+
+    // Intersection: merge members
+    if (this[TYPE] === INTERSECTION_RANGE && range[TYPE] === INTERSECTION_RANGE) {
+      let result = Object.create(SemverRange.prototype);
+      result[TYPE] = INTERSECTION_RANGE;
+      result[RANGE_SET] = [...this[RANGE_SET], ...range[RANGE_SET]];
+      return result;
+    }
+    if (this[TYPE] === INTERSECTION_RANGE) {
+      let result = Object.create(SemverRange.prototype);
+      result[TYPE] = INTERSECTION_RANGE;
+      result[RANGE_SET] = [...this[RANGE_SET], range];
+      return result;
+    }
+    if (range[TYPE] === INTERSECTION_RANGE)
+      return range.intersect(this);
+
+    // Both are simple types (original 4): use original logic
+    if (this[TYPE] <= EXACT_RANGE && range[TYPE] <= EXACT_RANGE) {
+      let higherRange, lowerRange, polarity;
+      if (range[VERSION].gt(this[VERSION])) {
+        higherRange = range;
+        lowerRange = this;
+        polarity = true;
+      }
+      else {
+        higherRange = this;
+        lowerRange = range;
+        polarity = false;
+      }
+
+      if (!lowerRange.has(higherRange[VERSION], true))
+        return;
+
+      if (lowerRange[TYPE] === MAJOR_RANGE)
+        return polarity ? range : this;
+
+      let intersection = new SemverRange(higherRange[VERSION].toString());
+      intersection[TYPE] = STABLE_RANGE;
+      return intersection;
     }
 
-    if (!lowerRange.has(higherRange[VERSION], true))
-      return;
-
-    if (lowerRange[TYPE] === MAJOR_RANGE)
-      return polarity ? range : this;
-
-    let intersection = new SemverRange(higherRange[VERSION].toString());
-    intersection[TYPE] = STABLE_RANGE;
-    return intersection;
+    // Mixed: create intersection
+    let result = Object.create(SemverRange.prototype);
+    result[TYPE] = INTERSECTION_RANGE;
+    result[RANGE_SET] = [this, range];
+    return result;
   }
   bestMatch (versions, unstable = false) {
     let maxSemver;
@@ -355,6 +688,14 @@ class SemverRange {
         return '~' + version.toString();
       case EXACT_RANGE:
         return version.toString();
+      case LOWER_BOUND:
+        return (this[BOUND_INCLUSIVE] ? '>=' : '>') + version.toString();
+      case UPPER_BOUND:
+        return (this[BOUND_INCLUSIVE] ? '<=' : '<') + version.toString();
+      case INTERSECTION_RANGE:
+        return this[RANGE_SET].map(r => r.toString()).join(' ');
+      case UNION_RANGE:
+        return this[RANGE_SET].map(r => r.toString()).join(' || ');
     }
   }
   toJSON() {
@@ -367,7 +708,11 @@ class SemverRange {
   }
   static isValid (range) {
     let semverRange = new SemverRange(range);
-    return semverRange[TYPE] !== EXACT_RANGE || semverRange[VERSION][TAG] === undefined;
+    // Original simple types: exact with a tag is invalid
+    if (semverRange[TYPE] === EXACT_RANGE)
+      return semverRange[VERSION][TAG] === undefined;
+    // New composite/bound types are always valid if they parsed
+    return true;
   }
   static compare (r1, r2) {
     if (!(r1 instanceof SemverRange))
@@ -380,9 +725,12 @@ class SemverRange {
       return 1;
     if (r2[TYPE] === WILDCARD_RANGE)
       return -1;
-    let cmp = Semver.compare(r1[VERSION], r2[VERSION]);
-    if (cmp !== 0) {
-      return cmp;
+    let v1 = effectiveVersion(r1);
+    let v2 = effectiveVersion(r2);
+    if (v1 && v2) {
+      let cmp = Semver.compare(v1, v2);
+      if (cmp !== 0)
+        return cmp;
     }
     if (r1[TYPE] === r2[TYPE])
       return 0;
