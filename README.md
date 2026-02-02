@@ -122,19 +122,6 @@ versions.sort(Semver.compare);   // [1.2.3, 2.3.4-alpha, 2.3.4-alpha.2, 2.4.5]
 ranges.sort(SemverRange.compare) // [1.2, ^1.2.3, 2.3.4]
 ```
 
-### Conversion from Node Semver Ranges
-
-A utility function is included for compatibility with code that passes Node semver ranges:
-
-```js
-const convertRange = require('sver/convert-range');
-
-convertRange('>=2.3.4 <3.0.0').toString(); // >=2.3.4 <3.0.0
-convertRange('^1.0.0 || ^2.0.0').toString(); // ^1.0.0 || ^2.0.0
-```
-
-Since `SemverRange` now natively supports full range syntax, `convertRange` is a thin wrapper around `new SemverRange(range)`.
-
 ### Semver and Semver Range Validation
 
 When a version string fails semver validation it falls back to being treated as a tag, still as a `Semver` instance.
